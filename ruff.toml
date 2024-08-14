@@ -1,0 +1,12 @@
+target-version = "py311"
+extend-include = ["*.ipynb"]
+line-length = 80
+
+[lint]
+extend-select = [
+  "UP",  # pyupgrade
+  "D",   # pydocstyle
+]
+
+[lint.pydocstyle]
+convention = "google"

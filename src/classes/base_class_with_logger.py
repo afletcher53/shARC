@@ -1,6 +1,6 @@
-from .base_class_with_logger import BaseClassWithLogger  # Adjust the import to your file structure
+class BaseClassWithLogger:
+    def __init__(self, log_file: str) -> None:
+        from .logger_setup import LoggerSetup
 
-class ProjectStrings(BaseClassWithLogger):
-    def __init__(self) -> None:
-        super().__init__("project_strings.log")
-        self.logger.info("ProjectStrings initialized.")
+        logger_name = self.__class__.__name__  # or __name__ to use the module name
+        self.logger = LoggerSetup(name=logger_name, log_file=log_file).get_logger()
