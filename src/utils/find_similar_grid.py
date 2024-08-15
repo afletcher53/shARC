@@ -42,6 +42,9 @@ def find_similar_solutions(
         ):
             combined_grids.append(aug_solution)
 
+    colour_variations =[create_colour_blind_grids(solution) for _ in range(5)]
+    combined_grids.extend([variation for variations in colour_variations for variation in variations])
+
     np.random.shuffle(combined_grids)
 
     original_solution_index = next(
@@ -55,6 +58,11 @@ def find_similar_solutions(
 
     return combined_grids, original_solution_index
 
+def create_colour_blind_grids(grid: np.ndarray) -> List[np.ndarray]:
+    variation = grid.copy()
+    mask = grid != 0
+    variation[mask] = np.random.randint(1, 10, size=variation[mask].shape)
+    return [variation]
 
 def preprocess_grid(grid: np.ndarray) -> np.ndarray:
     """Preprocess the input grid to ensure consistent shape and data type."""

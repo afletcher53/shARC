@@ -1,7 +1,7 @@
 """This is the main file that demonstrates how to use the DataLoader class."""
+
 from classes.data_loader import DataLoader
 from utils.find_similar_grid import find_similar_solutions
-import numpy as np
 
 def main():
     """This is the main function that demonstrates how to use the DataLoader class."""
@@ -30,18 +30,26 @@ def main():
 
     dl.plot_solution(challenge["test_input"], f"{challenge_id}_test")
     dl.plot_solution(
-        challenge["train_examples"][3]["input"], f"{challenge_id}_train_{3}_input"
+        challenge["train_examples"][3]["input"],
+        f"{challenge_id}_train_{3}_input",
     )
     dl.plot_solution(
-        challenge["train_examples"][3]["output"], f"{challenge_id}_train_{3}_output"
+        challenge["train_examples"][3]["output"],
+        f"{challenge_id}_train_{3}_output",
     )
 
     dl.plot_train_and_test_examples({challenge_id: challenge})
-    grids, original_solution_index = find_similar_solutions(challenge['solution'], dl)
+    grids, original_solution_index = find_similar_solutions(
+        challenge["solution"], dl
+    )
     dl.plot_multiple_solutions(grids, f"{challenge_id}_similar_solutions")
-    dl.plot_solution(challenge['solution'][0], f"./{challenge_id}_similar_solutions/original_solution")
-    print(challenge['solution'][0])
-    print(f'original_solution_index: {original_solution_index}')
+    dl.plot_solution(
+        challenge["solution"][0],
+        f"./{challenge_id}_similar_solutions/original_solution",
+    )
+    print(challenge["solution"][0])
+    print(f"original_solution_index: {original_solution_index}")
+
 
 if __name__ == "__main__":
     main()
