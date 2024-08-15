@@ -14,7 +14,9 @@ class DataLoader(BaseClassWithLogger):
         self.dataset = None
 
     def show_available_datasets(self) -> list:
-        self.logger.info(f"Available datasets: {self.strings.available_datasets}")
+        self.logger.info(
+            f"Available datasets: {self.strings.available_datasets}"
+        )
         return self.strings.available_datasets
 
     def _validate_dataset_type(self, dataset_type: str) -> bool:
@@ -33,7 +35,9 @@ class DataLoader(BaseClassWithLogger):
             return self._load_test_dataset()
 
         challenges_path, solutions_path = self._get_dataset_locations()
-        self.logger.info(f"Loading dataset from {challenges_path} and {solutions_path}")
+        self.logger.info(
+            f"Loading dataset from {challenges_path} and {solutions_path}"
+        )
 
         with open(challenges_path, "r") as f:
             challenges = json.load(f)
@@ -65,7 +69,8 @@ class DataLoader(BaseClassWithLogger):
             self.logger.info("Fetching evaluation dataset locations.")
             return (
                 os.path.join(
-                    os.getcwd(), self.strings.get_evaluation_challenges_data_path
+                    os.getcwd(),
+                    self.strings.get_evaluation_challenges_data_path,
                 ),
                 os.path.join(
                     os.getcwd(), self.strings.get_evaluation_solutions_data_path
@@ -74,7 +79,9 @@ class DataLoader(BaseClassWithLogger):
         elif self.dataset_type == "test":
             self.logger.info("Fetching test dataset location.")
             return (
-                os.path.join(os.getcwd(), self.strings.get_test_challenges_data_path),
+                os.path.join(
+                    os.getcwd(), self.strings.get_test_challenges_data_path
+                ),
             )
 
     def _flatten_dataset(self, challenges: dict, solutions: dict) -> dict:
@@ -99,13 +106,17 @@ class DataLoader(BaseClassWithLogger):
 
         with open(test_challenges_path, "r") as f:
             challenges = json.load(f)
-            self.logger.info(f"Test challenges loaded from {test_challenges_path}")
+            self.logger.info(
+                f"Test challenges loaded from {test_challenges_path}"
+            )
         self.logger.info("Flattening test dataset.")
         self.dataset = {
             uuid: {"test_input": challenge_data.get("test", [])[0]["input"]}
             for uuid, challenge_data in challenges.items()
         }
-        self.logger.info(f"{len(self.dataset)} test challenges loaded and flattened.")
+        self.logger.info(
+            f"{len(self.dataset)} test challenges loaded and flattened."
+        )
         return self.dataset
 
     def randomly_sample_datapoints(self, sample_size: int) -> dict:
@@ -116,7 +127,9 @@ class DataLoader(BaseClassWithLogger):
             self.logger.error(
                 "Sample size should be less than the size of the dataset."
             )
-            raise ValueError("Sample size should be less than the size of the dataset.")
+            raise ValueError(
+                "Sample size should be less than the size of the dataset."
+            )
 
         if not hasattr(self, "dataset_type"):
             self.logger.error(
@@ -166,34 +179,50 @@ class DataLoader(BaseClassWithLogger):
         :param output_dir: Directory where the plot image will be saved.
         """
         if self.dataset is None:
-            self.logger.error("Dataset not loaded. Load a dataset before plotting.")
-            raise ValueError("Dataset not loaded. Load a dataset before plotting.")
+            self.logger.error(
+                "Dataset not loaded. Load a dataset before plotting."
+            )
+            raise ValueError(
+                "Dataset not loaded. Load a dataset before plotting."
+            )
         if self.dataset_type == "test":
-            self.logger.error("Cannot plot train and test examples for test dataset. ")
-            raise ValueError("Cannot plot train and test examples for test dataset.")
+            self.logger.error(
+                "Cannot plot train and test examples for test dataset. "
+            )
+            raise ValueError(
+                "Cannot plot train and test examples for test dataset."
+            )
 
         for sample_id, data in sample_data.items():
             train_examples = data["train_examples"]
             num_train_examples = len(train_examples)
 
             fig, axs = plt.subplots(
-                num_train_examples + 1, 2, figsize=(10, 5 * (num_train_examples + 1))
+                num_train_examples + 1,
+                2,
+                figsize=(10, 5 * (num_train_examples + 1)),
             )
 
             for idx, ex in enumerate(train_examples):
                 input_grid = np.array(ex["input"])
                 output_grid = np.array(ex["output"])
 
-                axs[idx, 0].imshow(input_grid, cmap="viridis", interpolation="nearest")
+                axs[idx, 0].imshow(
+                    input_grid, cmap="viridis", interpolation="nearest"
+                )
                 axs[idx, 0].set_title(f"Train Input {idx+1}")
                 axs[idx, 0].axis("off")
 
-                axs[idx, 1].imshow(output_grid, cmap="viridis", interpolation="nearest")
+                axs[idx, 1].imshow(
+                    output_grid, cmap="viridis", interpolation="nearest"
+                )
                 axs[idx, 1].set_title(f"Train Output {idx+1}")
                 axs[idx, 1].axis("off")
 
             axs[num_train_examples, 0].imshow(
-                np.array(data["test_input"]), cmap="viridis", interpolation="nearest"
+                np.array(data["test_input"]),
+                cmap="viridis",
+                interpolation="nearest",
             )
             axs[num_train_examples, 0].set_title("Test Input")
             axs[num_train_examples, 0].axis("off")
@@ -236,3 +265,47 @@ class DataLoader(BaseClassWithLogger):
         plt.close()
 
         self.logger.info(f"Solution grid saved as {output_file_path}")
+
+    def plot_multiple_solutions(self, grids: list, output_dir: str = "output"):
+        """
+        Given a list of grids as numpy arrays, plots all the grids as images.
+
+        :param grids: A list of numpy arrays representing the grids to be plotted.
+        :param output_dir: Directory where the plot images will be saved.
+        """
+        output_dir = f"./output/{output_dir}"
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        for idx, grid in enumerate(grids):
+            plt.figure(figsize=(6, 6))
+            plt.imshow(grid, cmap="viridis", interpolation="nearest")
+            plt.axis("off")
+
+            plt.title(f"Grid {idx}")
+
+            output_file_path = os.path.join(output_dir, f"grid_{idx}.png")
+
+            plt.savefig(output_file_path)
+            plt.close()
+
+        self.logger.info(f"{len(grids)} solution grids saved in {output_dir}")
+
+    def get_all_output_grids(self):
+        if self.dataset is None:
+            self.logger.error(
+                "Dataset not loaded. Load a dataset before plotting."
+            )
+            raise ValueError(
+                "Dataset not loaded. Load a dataset before plotting."
+            )
+
+        all_output_grids = []
+        for _, data in self.dataset.items():
+            all_output_grids.append(data["solution"][0])
+
+        self.logger.info(
+            f"Total number of output grids: {len(all_output_grids)}"
+        )
+
+        return all_output_grids

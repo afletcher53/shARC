@@ -1,6 +1,7 @@
 """This is the main file that demonstrates how to use the DataLoader class."""
 from classes.data_loader import DataLoader
-
+from utils.find_similar_grid import find_similar_solutions
+import numpy as np
 
 def main():
     """This is the main function that demonstrates how to use the DataLoader class."""
@@ -20,7 +21,7 @@ def main():
     unique_keys = set(training.keys())
     print(f"len(training): {len(unique_keys)}")
 
-    random_samples = dl.randomly_sample_datapoints(1)
+    random_samples = dl.randomly_sample_datapoints(5)
     for challenge_id, challenge_data in random_samples.items():
         dl.plot_train_and_test_examples({challenge_id: challenge_data})
 
@@ -36,7 +37,11 @@ def main():
     )
 
     dl.plot_train_and_test_examples({challenge_id: challenge})
-
+    grids, original_solution_index = find_similar_solutions(challenge['solution'], dl)
+    dl.plot_multiple_solutions(grids, f"{challenge_id}_similar_solutions")
+    dl.plot_solution(challenge['solution'][0], f"./{challenge_id}_similar_solutions/original_solution")
+    print(challenge['solution'][0])
+    print(f'original_solution_index: {original_solution_index}')
 
 if __name__ == "__main__":
     main()

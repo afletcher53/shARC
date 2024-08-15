@@ -69,3 +69,22 @@ dl.plot_train_and_test_examples({challenge_id: challenge_data})
 dl.plot_solution(challenge_data['test_input'], f"{challenge_id}_test_input")
 ```
 ![specific_solution](./output/007bbfb7_train_3_input.png)
+
+### Finding similar solutions
+
+Given an input grid, we can find similar solutions via:
+
+```python
+
+grid = [[...][...][...]]
+similar_grids, original_idx = find_similar_solutions(grid, 5)
+
+```
+
+This function
+
+1. Finds the N most similar grids from all solutions, using cosine similarity on the colour distribution, and grid size.
+2. Augments the original solution via rotation, jittering, masking, scaling and cropping
+3. Returns unique values within that pool, and add ensures solution is within that pool. 
+
+
