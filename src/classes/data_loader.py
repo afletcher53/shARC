@@ -25,7 +25,7 @@ class DataLoader(BaseClassWithLogger):
             raise ValueError(f"Invalid dataset type: {dataset_type}")
         return True
 
-    def load_dataset(self, dataset_type: str) -> dict:
+    def load_dataset(self, dataset_type: str, dataset_locations_override=()) -> dict:
         self._validate_dataset_type(dataset_type)
         self.logger.info(f"Loading dataset of type: {dataset_type}")
         self.dataset_type = dataset_type
@@ -34,7 +34,11 @@ class DataLoader(BaseClassWithLogger):
             self.logger.info("Fetching test dataset without solutions.")
             return self._load_test_dataset()
 
-        challenges_path, solutions_path = self._get_dataset_locations()
+        if not dataset_locations_override:
+            challenges_path, solutions_path = self._get_dataset_locations()
+        else:
+            challenges_path, solutions_path = dataset_locations_override
+
         self.logger.info(
             f"Loading dataset from {challenges_path} and {solutions_path}"
         )

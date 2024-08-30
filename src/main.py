@@ -1,6 +1,6 @@
 """This is the main file that demonstrates how to use the DataLoader class."""
 
-from classes.data_loader import DataLoader
+from classes.data_loader import DataLoader  # JC note: might consider renaming to avoid clash with the PyTorch class, if we're using
 from utils.find_similar_grid import find_similar_solutions
 
 def main():
