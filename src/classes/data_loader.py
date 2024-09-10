@@ -313,3 +313,59 @@ class DataLoader(BaseClassWithLogger):
         )
 
         return all_output_grids
+
+
+    def plot_single_train_examples(
+        self, sample_data: dict, output_dir: str = "output"
+    ):
+        """
+        Plots the train and test examples for a given sample.
+
+        :param sample_data: A dictionary with 'train_examples' and 'test_input'.
+        :param output_dir: Directory where the plot image will be saved.
+        """
+        if self.dataset is None:
+            self.logger.error(
+                "Dataset not loaded. Load a dataset before plotting."
+            )
+            raise ValueError(
+                "Dataset not loaded. Load a dataset before plotting."
+            )
+        if self.dataset_type == "test":
+            self.logger.error(
+                "Cannot plot train and test examples for test dataset. "
+            )
+            raise ValueError(
+                "Cannot plot train and test examples for test dataset."
+            )
+
+        for sample_id, data in sample_data.items():
+            train_examples = data["train_examples"]
+            num_train_examples = len(train_examples)
+            
+           
+            for idx, ex in enumerate(train_examples):
+                output_file_path = os.path.join(
+                    output_dir, f"{sample_id}_train_{idx}_input.png"
+                )
+                input_grid = np.array(ex["input"])
+                output_grid = np.array(ex["output"])
+
+
+
+                fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+                axs[0].imshow(
+                    input_grid, cmap="viridis", interpolation="nearest"
+                )
+                axs[0].set_title(f"Train Input {idx+1}")
+                axs[0].axis("off")
+
+                axs[1].imshow(
+                    output_grid, cmap="viridis", interpolation="nearest"
+                )
+                axs[1].set_title(f"Train Output {idx+1}")
+                axs[1].axis("off")
+                
+               
+                plt.savefig(output_file_path)
+                plt.close(fig)

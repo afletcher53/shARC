@@ -1,7 +1,11 @@
 """This is the main file that demonstrates how to use the DataLoader class."""
 
-from classes.data_loader import DataLoader  # JC note: might consider renaming to avoid clash with the PyTorch class, if we're using
+import base64
+import json
+import os
+from classes.data_loader import DataLoader
 from utils.find_similar_grid import find_similar_solutions
+from utils.generate_train_output_for_llm import generate_nld_of_example
 
 def main():
     """This is the main function that demonstrates how to use the DataLoader class."""
@@ -52,4 +56,16 @@ def main():
 
 
 if __name__ == "__main__":
+    # dl = DataLoader()
+    # train = dl.load_dataset("training")
+    # dl.plot_single_train_examples(train, 'output/singles')
+
+    # get all the image files for the training data
+    responses = generate_nld_of_example(sample=5)
+
+    # save the responses to a file
+    with open('output/singles/responses.json', 'w') as f:
+        f.write(json.dumps(responses))
+        
+
     main()
