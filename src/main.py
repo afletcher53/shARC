@@ -14,6 +14,12 @@ def main():
     # Load a dataset (e.g., 'training')
     training_data = dl.load_dataset("training")
 
+    # for each training data, count the number of training inputs
+    total_training_inputs = 0
+    for key, value in training_data.items():
+        total_training_inputs += len(value['train_examples'])
+    print(f"Total training inputs: {total_training_inputs}")
+
     # Check the number of unique challenges
     unique_keys = set(training_data.keys())
     print(f"Number of training challenges: {len(unique_keys)}")
