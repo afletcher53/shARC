@@ -138,7 +138,7 @@ In addition to geometric transformations, **color augmentations** involve remapp
 
 The **total number of augmentations** for each number of colors is a product of the geometric augmentations and the color augmentations. The total formula is:
 
-$`\text{Total augmentations} = \text{Geometric augmentations} \times \left( \binom{8}{n} \times n! \right}`$
+$`\text{Total augmentations} = \text{Geometric augmentations} \times (\binom{8}{n} \times n!)`$
 
 Where $`\binom{8}{n}`$ represents the number of ways to choose $`n`$ colors from 8, and $`n!`$ accounts for the permutations of those selected colors.
 
@@ -160,12 +160,14 @@ The table below summarizes the maximum number of possible augmentations for each
 ### General Formula
 The general formula for the total number of augmentations for $`n`$ colors is:
 
-$`\text{Total augmentations} = 8 \times \left( \binom{8}{n} \times n! \right}`$
+$`\text{Total augmentations} = 8 \times (\binom{8}{n} \times n!)`$
 
 ### Limits for dataset set
 
-- Therefore, the **minimum number** of augmented input/output datapoints that can be generated from the training set is Number of Input Output Pairs in training set (1302) x 64 = 83,328.
+- Therefore, the **minimum number** of Augmented input/output training datapoints that can be generated from the training set is Number of Input Output Pairs in training set (1302) x 64 = 83,328.
 
-- The **maximum number** is Number of Input Output Pairs in training set (1302) x 40,320 = 52,496,640. 
+- The **maximum number** is Number of Input Output Pairs in training set (1302) x 322,560 = 432,993,120. 
 
 - Due to the frequency of non-black or grey colours used, total augmentations is likely to be nearer to the minimum as rarely do puzzles utilize non-black or grey colours.
+
+- There are on average 3.225 datapoints per training example (1302/400).
