@@ -86,7 +86,6 @@ This function
 1. Finds the N most similar grids from all solutions, using cosine similarity on the colour distribution, and grid size.
 2. Augments the original solution via rotation, jittering, masking, scaling and cropping
 3. Returns unique values within that pool, and add ensures solution is within that pool. 
-
 # Puzzle Grid Augmentations
 
 This project implements both **geometric** and **color augmentations** for puzzle grids. The goal is to generate new puzzle variations by applying these augmentations while preserving the puzzle's structure and meaning.
@@ -110,7 +109,7 @@ Geometric augmentations include flipping and rotating the puzzle grid. The possi
         - x' = y, y' = -x
 
 This results in 16 total geometric augmentations, combining vertical flips, horizontal flips, and rotations:
-- \( 2 \) (vertical flip) × \( 2 \) (horizontal flip) × \( 4 \) (rotations) = 16.
+- $`2`$ (vertical flip) × $`2`$ (horizontal flip) × $`4`$ (rotations) = 16.
 
 However, certain combinations are redundant, which reduces the effective number of geometric augmentations to 8:
 - Rotating 180° is equivalent to performing both a vertical and horizontal flip.
@@ -131,47 +130,42 @@ In addition to geometric transformations, **color augmentations** involve remapp
 
 - **Information Preservation**: Each original color must be mapped to a unique new color. No two colors can be mapped to the same color (e.g., red and green cannot both be mapped to yellow), as this would result in a loss of information.
 
-- **Combination of Colors**: To remap colors, we first select a subset of `n` colors from a total set of 8 available colors (represented by integers from `1` to `8`). The number of ways to choose `n` colors from 8 is determined by the **binomial coefficient** \( \binom{8}{n} \) (read as "8 choose n").
+- **Combination of Colors**: To remap colors, we first select a subset of $`n`$ colors from a total set of 8 available colors (represented by integers from `1` to `8`). The number of ways to choose $`n`$ colors from 8 is determined by the **binomial coefficient** $`\binom{8}{n}`$ (read as "8 choose n").
 
-- **One-to-One Mappings**: The color mappings must be **bijective**, meaning each color must be mapped to a unique color. The number of ways to assign `n` colors to `n` selected integers is \( n! \) (i.e., `n` factorial), which accounts for all possible arrangements of the selected colors.
+- **One-to-One Mappings**: The color mappings must be **bijective**, meaning each color must be mapped to a unique color. The number of ways to assign $`n`$ colors to $`n`$ selected integers is $`n!`$ (i.e., `n` factorial), which accounts for all possible arrangements of the selected colors.
 
 ### Total Augmentations
 
 The **total number of augmentations** for each number of colors is a product of the geometric augmentations and the color augmentations. The total formula is:
 
-\[
-\text{Total augmentations} = \text{Geometric augmentations} \times \left( \binom{8}{n} \times n! \right)
-\]
+$`\text{Total augmentations} = \text{Geometric augmentations} \times \left( \binom{8}{n} \times n! \right}`$
 
-Where `\binom{8}{n}` represents the number of ways to choose `n` colors from 8, and `n!` accounts for the permutations of those selected colors.
+Where $`\binom{8}{n}`$ represents the number of ways to choose $`n`$ colors from 8, and $`n!`$ accounts for the permutations of those selected colors.
 
 ### Maximum Number of Augmentations (1 to 8 Colors)
 
 The table below summarizes the maximum number of possible augmentations for each number of colors (1 to 8), combining both geometric and color augmentations:
 
-| Number of colours not black or grey (`n`) | Ways to Choose Colors (`\binom{8}{n}`) | Permutations (`n!`) | Color Augmentations (`\binom{8}{n} \times n!`) | Geometric Augmentations | Total Augmentations |
+| Number of colours not black or grey (`n`) | Ways to Choose Colors ($`\binom{8}{n}`$) | Permutations ($`n!`$) | Color Augmentations ($`\binom{8}{n} \times n!`$) | Geometric Augmentations | Total Augmentations |
 |------------------------|---------------------------------------|---------------------|-----------------------------------------------|-------------------------|---------------------|
-| 1                      | \( \binom{8}{1} = 8 \)                | \( 1! = 1 \)        | \( 8 \times 1 = 8 \)                         | 8                       | \( 8 \times 8 = 64 \)|
-| 2                      | \( \binom{8}{2} = 28 \)               | \( 2! = 2 \)        | \( 28 \times 2 = 56 \)                       | 8                       | \( 56 \times 8 = 448 \) |
-| 3                      | \( \binom{8}{3} = 56 \)               | \( 3! = 6 \)        | \( 56 \times 6 = 336 \)                      | 8                       | \( 336 \times 8 = 2,688 \) |
-| 4                      | \( \binom{8}{4} = 70 \)               | \( 4! = 24 \)       | \( 70 \times 24 = 1,680 \)                   | 8                       | \( 1,680 \times 8 = 13,440 \) |
-| 5                      | \( \binom{8}{5} = 56 \)               | \( 5! = 120 \)      | \( 56 \times 120 = 6,720 \)                  | 8                       | \( 6,720 \times 8 = 53,760 \) |
-| 6                      | \( \binom{8}{6} = 28 \)               | \( 6! = 720 \)      | \( 28 \times 720 = 20,160 \)                 | 8                       | \( 20,160 \times 8 = 161,280 \) |
-| 7                      | \( \binom{8}{7} = 8 \)                | \( 7! = 5,040 \)    | \( 8 \times 5,040 = 40,320 \)                | 8                       | \( 40,320 \times 8 = 322,560 \) |
-| 8                      | \( \binom{8}{8} = 1 \)                | \( 8! = 40,320 \)   | \( 1 \times 40,320 = 40,320 \)               | 8                       | \( 40,320 \times 8 = 322,560 \) |
+| 1                      | $`\binom{8}{1} = 8`$                | $`1! = 1`$        | $`8 \times 1 = 8`$                         | 8                       | $`8 \times 8 = 64`$ |
+| 2                      | $`\binom{8}{2} = 28`$               | $`2! = 2`$        | $`28 \times 2 = 56`$                       | 8                       | $`56 \times 8 = 448`$ |
+| 3                      | $`\binom{8}{3} = 56`$               | $`3! = 6`$        | $`56 \times 6 = 336`$                      | 8                       | $`336 \times 8 = 2,688`$ |
+| 4                      | $`\binom{8}{4} = 70`$               | $`4! = 24`$       | $`70 \times 24 = 1,680`$                   | 8                       | $`1,680 \times 8 = 13,440`$ |
+| 5                      | $`\binom{8}{5} = 56`$               | $`5! = 120`$      | $`56 \times 120 = 6,720`$                  | 8                       | $`6,720 \times 8 = 53,760`$ |
+| 6                      | $`\binom{8}{6} = 28`$               | $`6! = 720`$      | $`28 \times 720 = 20,160`$                 | 8                       | $`20,160 \times 8 = 161,280`$ |
+| 7                      | $`\binom{8}{7} = 8`$                | $`7! = 5,040`$    | $`8 \times 5,040 = 40,320`$                | 8                       | $`40,320 \times 8 = 322,560`$ |
+| 8                      | $`\binom{8}{8} = 1`$                | $`8! = 40,320`$   | $`1 \times 40,320 = 40,320`$               | 8                       | $`40,320 \times 8 = 322,560`$ |
 
 ### General Formula
-The general formula for the total number of augmentations for `n` colors is:
+The general formula for the total number of augmentations for $`n`$ colors is:
 
-\[
-\text{Total augmentations} = 8 \times \left( \binom{8}{n} \times n! \right)
-\]
+$`\text{Total augmentations} = 8 \times \left( \binom{8}{n} \times n! \right}`$
 
 ### Limits for dataset set
 
 - Therefore, the **minimum number** of augmented input/output datapoints that can be generated from the training set is Number of Input Output Pairs in training set (1302) x 64 = 83,328.
 
-- The **maximum number** is Number of Input Output Pairs in training set (1302) x 40320 = 52,496,640. 
+- The **maximum number** is Number of Input Output Pairs in training set (1302) x 40,320 = 52,496,640. 
 
 - Due to the frequency of non-black or grey colours used, total augmentations is likely to be nearer to the minimum as rarely do puzzles utilize non-black or grey colours.
-
