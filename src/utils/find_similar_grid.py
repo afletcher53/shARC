@@ -1,6 +1,8 @@
+from itertools import permutations, product
 import numpy as np
 from scipy.spatial.distance import cosine
 from typing import List, Tuple
+import pandas as pd
 
 
 def find_similar_solutions(
@@ -105,25 +107,100 @@ def calculate_similarity(
 
     return color_similarity * size_similarity
 
+def generate_color_permutations(grid: np.ndarray, available_colors: List[int]) -> List[np.ndarray]:
+    # Gather unique colors in the grid excluding 0 and 1
+    unique_colors = set(np.unique(grid)) - {0, 1}
+    
+    # Generate permutations of the unique colors from the available colors
+    color_permutations = list(permutations(available_colors, len(unique_colors)))
+    
+    permuted_grids = []
+    
+    colour_maps = []
+    for color_perm in color_permutations:
+        color_map = dict(zip(unique_colors, color_perm))
+        # Add mappings for colors 0 and 1 to stay unchanged
+        color_map[0] = 0
+        color_map[1] = 1
+        colour_maps.append(color_map)
 
-def generate_augmentations(grid: List[np.ndarray]) -> List[np.ndarray]:
-    """Generate augmented versions of the input grids."""
-    augmented = []
-    augmented.extend(
-        [
-            grid,
-            np.flipud(grid),
-            np.fliplr(grid),
-            np.rot90(grid),
-            np.rot90(grid, k=2),
-            np.rot90(grid, k=3),
-            mask_grid(grid),
-            jitter_grid(grid),
-            scale_grid(grid),
-            crop_grid(grid),
-        ]
-    )
-    return augmented
+        # Create a new grid by replacing the colors using the color_map
+        permuted_grid = np.vectorize(lambda x: color_map.get(x, x))(grid)
+        permuted_grids.append(permuted_grid)
+    
+    return permuted_grids, colour_maps
+
+
+def generate_augmentations(grid: List[np.ndarray]) -> dict:
+    def augment_single_grid(g):
+        augmentations = []
+        for v_flip in [False, True]:
+            for h_flip in [False, True]:
+                for rotation in range(4):
+                    aug = g.copy()
+                    if v_flip:
+                        aug = np.flipud(aug)
+                    if h_flip:
+                        aug = np.fliplr(aug)
+                    
+                    flip_status = []
+                    if v_flip:
+                        flip_status.append("vertical flip")
+                    if h_flip:
+                        flip_status.append("horizontal flip")
+                    flip_description = " and ".join(flip_status) if flip_status else "no flip"
+                    
+                    aug = np.rot90(aug, k=rotation)
+                    augmentations.append((f"{flip_description}, rotated {rotation * 90}°", aug))
+        return augmentations
+
+
+    augmented_grids = [augment_single_grid(g) for g in grid]
+    
+    # limit to unique augmentations
+    unique_augmentations = []
+    for i, aug in enumerate(augmented_grids):
+        for description, grid in aug:
+            if not any(np.array_equal(grid, unique[1]) for unique in unique_augmentations):
+                unique_augmentations.append((description, grid))
+
+    available_colors = [2, 3, 4, 5, 6, 7, 8, 9]
+    lookup_list = {}
+    
+    for description, unique_grid in unique_augmentations:
+        color_permuted_grids, colour_maps = generate_color_permutations(unique_grid, available_colors)
+        lookup_list[description] = {
+            "original": unique_grid,
+            "color_permutations": color_permuted_grids,
+            "colour_maps": colour_maps
+        }
+        # append the colour maps to the lookup list
+
+    df_lookup = create_dataframe_from_lookup(lookup_list)
+    return df_lookup
+
+
+def create_dataframe_from_lookup(lookup_list: dict) -> pd.DataFrame:
+    rows = []
+    
+    # Iterate over each description in the lookup list
+    for description, data in lookup_list.items():
+        original_input = data["original"]
+        color_permutations = data["color_permutations"]
+        colour_maps = data["colour_maps"]
+        
+        # For each color permutation, we add a row
+        for permuted_grid, colour_map in zip(color_permutations, colour_maps):
+            rows.append({
+                "Description (Geometric Augmentation)": description,
+                "Original Input": original_input,
+                "Permutation": permuted_grid,
+                "Colour Map": colour_map
+            })
+    
+    # Create the DataFrame
+    df = pd.DataFrame(rows)
+    return df
 
 
 def mask_grid(grid: np.ndarray, mask_ratio: float = 0.2) -> np.ndarray:
@@ -149,3 +226,9 @@ def scale_grid(grid: np.ndarray, scale: int = 2) -> np.ndarray:
 def crop_grid(grid: np.ndarray) -> np.ndarray:
     """Crop the grid by removing the last row and column."""
     return grid[:-1, :-1] if grid.shape[0] > 1 and grid.shape[1] > 1 else grid
+
+# colour augmentations
+# Original colour map
+# dictionary remapping of colours
+# don't change black or grey
+# flip x rotate x colour is the possible combinations

@@ -264,7 +264,7 @@ class DataLoader(BaseClassWithLogger):
             os.makedirs(output_dir)
 
         output_file_path = os.path.join(output_dir, f"{file_name}.png")
-
+        plt.show()
         plt.savefig(output_file_path)
         plt.close()
 

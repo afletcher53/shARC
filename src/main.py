@@ -1,71 +1,66 @@
-"""This is the main file that demonstrates how to use the DataLoader class."""
-
-import base64
-import json
-import os
+from classes import ProjectStrings
 from classes.data_loader import DataLoader
-from utils.find_similar_grid import find_similar_solutions
-from utils.generate_train_output_for_llm import generate_nld_of_example
+from utils.find_similar_grid import find_similar_solutions, generate_augmentations
+#  from utils.generate_train_output_for_llm import generate_nld_of_example  # Assuming 'classes' is a package with an __init__.py file
+import json
 
 def main():
-    """This is the main function that demonstrates how to use the DataLoader class."""
+    project_strings = ProjectStrings()
+
+
+    # Initialize the DataLoader
     dl = DataLoader()
-    print(dl.show_available_datasets())
 
-    evaluation = dl.load_dataset("evaluation")
+    # Load a dataset (e.g., 'training')
+    training_data = dl.load_dataset("training")
 
-    unique_keys = set(evaluation.keys())
-    print(f"len(evaluation): {len(unique_keys)}")
+    # Check the number of unique challenges
+    unique_keys = set(training_data.keys())
+    print(f"Number of training challenges: {len(unique_keys)}")
 
-    test = dl.load_dataset("test")
-    unique_keys = set(test.keys())
-    print(f"len(test): {len(unique_keys)}")
+    # Retrieve a specific challenge by ID
+    challenge_id = "00d62c1b"
+    challenge_data = dl.get_specific_sample(challenge_id)
 
-    training = dl.load_dataset("training")
-    unique_keys = set(training.keys())
-    print(f"len(training): {len(unique_keys)}")
+    # Access different parts of the challenge
+    print("Test Input:", challenge_data['test_input'])
+    print("Training Examples:", challenge_data['train_examples'])
+    print("Solution:", challenge_data['solution'])
 
-    random_samples = dl.randomly_sample_datapoints(5)
-    for challenge_id, challenge_data in random_samples.items():
-        dl.plot_train_and_test_examples({challenge_id: challenge_data})
+    # Plot train and test examples for a specific challenge
+    # dl.plot_train_and_test_examples({challenge_id: challenge_data})
+    # Plot a specific solution grid
 
-    challenge_id = "007bbfb7"
-    challenge = dl.get_specific_sample(challenge_id)
+    # dl.plot_solution(challenge_data['test_input'], f"{challenge_id}_test_input")
 
-    dl.plot_solution(challenge["test_input"], f"{challenge_id}_test")
-    dl.plot_solution(
-        challenge["train_examples"][3]["input"],
-        f"{challenge_id}_train_{3}_input",
-    )
-    dl.plot_solution(
-        challenge["train_examples"][3]["output"],
-        f"{challenge_id}_train_{3}_output",
-    )
+    # get a specific solution grid
+    solution = challenge_data['solution']
+    
 
-    dl.plot_train_and_test_examples({challenge_id: challenge})
-    grids, original_solution_index = find_similar_solutions(
-        challenge["solution"], dl
-    )
-    dl.plot_multiple_solutions(grids, f"{challenge_id}_similar_solutions")
-    dl.plot_solution(
-        challenge["solution"][0],
-        f"./{challenge_id}_similar_solutions/original_solution",
-    )
-    print(challenge["solution"][0])
-    print(f"original_solution_index: {original_solution_index}")
+    # generate augmented solutions
+    aug_solutions = generate_augmentations(solution)
 
 
+
+    similar_grids, original_idx = find_similar_solutions(solution, dl, 5)  
+        
+    # plot the similar grids
+    for idx, grid in enumerate(similar_grids):
+        dl.plot_solution(grid, f"similar_grid_{idx}")
+
+    # plot the original solution
+    dl.plot_solution(solution, "original_solution")
 if __name__ == "__main__":
     # dl = DataLoader()
     # train = dl.load_dataset("training")
     # dl.plot_single_train_examples(train, 'output/singles')
 
     # get all the image files for the training data
-    responses = generate_nld_of_example(sample=5)
+    # responses = generate_nld_of_example(sample=5)
 
     # save the responses to a file
-    with open('output/singles/responses.json', 'w') as f:
-        f.write(json.dumps(responses))
+    # with open('output/singles/responses.json', 'w') as f:
+    #     f.write(json.dumps(responses))
         
 
     main()
