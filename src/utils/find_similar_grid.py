@@ -1,8 +1,12 @@
 from itertools import permutations, product
+import math
+from matplotlib import pyplot as plt
 import numpy as np
 from scipy.spatial.distance import cosine
 from typing import List, Tuple
 import pandas as pd
+
+from classes.project_strings import ProjectStrings
 
 
 def find_similar_solutions(
@@ -108,30 +112,26 @@ def calculate_similarity(
     return color_similarity * size_similarity
 
 def generate_color_permutations(grid: np.ndarray, available_colors: List[int]) -> List[np.ndarray]:
-    # Gather unique colors in the grid excluding 0 and 1
     unique_colors = set(np.unique(grid)) - {0, 1}
-    
-    # Generate permutations of the unique colors from the available colors
+
     color_permutations = list(permutations(available_colors, len(unique_colors)))
     
     permuted_grids = []
     
     colour_maps = []
     for color_perm in color_permutations:
-        color_map = dict(zip(unique_colors, color_perm))
-        # Add mappings for colors 0 and 1 to stay unchanged
-        color_map[0] = 0
-        color_map[1] = 1
+        color_map = {int(k): v for k, v in zip(unique_colors, color_perm)}
+        color_map[0] = 0 # 0 is black
+        color_map[5] = 5 # 5 is the grey
         colour_maps.append(color_map)
 
-        # Create a new grid by replacing the colors using the color_map
         permuted_grid = np.vectorize(lambda x: color_map.get(x, x))(grid)
         permuted_grids.append(permuted_grid)
     
     return permuted_grids, colour_maps
 
 
-def generate_augmentations(grid: List[np.ndarray]) -> dict:
+def generate_augmentations(grid: List[np.ndarray], challenge_id: str, grid_type: str, train_example_count: int, plot: bool = False) -> dict:
     def augment_single_grid(g):
         augmentations = []
         for v_flip in [False, True]:
@@ -157,13 +157,14 @@ def generate_augmentations(grid: List[np.ndarray]) -> dict:
 
     augmented_grids = [augment_single_grid(g) for g in grid]
     
-    # limit to unique augmentations
     unique_augmentations = []
     for i, aug in enumerate(augmented_grids):
         for description, grid in aug:
             if not any(np.array_equal(grid, unique[1]) for unique in unique_augmentations):
                 unique_augmentations.append((description, grid))
 
+    
+        
     available_colors = [2, 3, 4, 5, 6, 7, 8, 9]
     lookup_list = {}
     
@@ -174,22 +175,119 @@ def generate_augmentations(grid: List[np.ndarray]) -> dict:
             "color_permutations": color_permuted_grids,
             "colour_maps": colour_maps
         }
-        # append the colour maps to the lookup list
+        lookup_list[description]["colour_maps"] = colour_maps
 
-    df_lookup = create_dataframe_from_lookup(lookup_list)
-    return df_lookup
+    colour_dict = {}
+    for description, data in lookup_list.items():
+        for i, colour_map in enumerate(data["colour_maps"]):
+            identifier = hash(str(colour_map)+str(description))
+            colour_dict[identifier] = {
+                "description": description,
+                "description_hash": hash(str(description)),
+                "challenge_id": challenge_id,
+                "grid_type": grid_type,
+                "original": data["original"],
+                "permutation": data["color_permutations"][i],
+                "colour_map": colour_map, 
+                "colour_map_hash": hash(str(colour_map))
+            }
+    
+    if plot:
+        save_augmentations_on_same_plot(grid, augmented_grids, f"{challenge_id}_augmentations_{grid_type}_{train_example_count}.png")
+        save_augmentations_on_same_plot(grid, [unique_augmentations], f"{challenge_id}_unique_augmentations_{grid_type}_{train_example_count}.png")
+        save_colour_dict_to_png(colour_dict, f"{challenge_id}_colour_dict_{grid_type}_{train_example_count}.png")
+
+    return colour_dict
+
+import matplotlib.colors as mcolors
+
+def save_colour_dict_to_png(colour_dict, save_path, max_cols=5, max_rows=20):
+    ps = ProjectStrings()
+    num_grids = len(colour_dict)
+    grids_per_figure = max_cols * max_rows
+    num_figures = math.ceil(num_grids / grids_per_figure)
+
+    color_map = mcolors.ListedColormap(ps.CUSTOM_COLORS)
+    norm = mcolors.BoundaryNorm(np.arange(-0.5, 10, 1), color_map.N)
+
+    for fig_num in range(num_figures):
+        start_index = fig_num * grids_per_figure
+        end_index = min((fig_num + 1) * grids_per_figure, num_grids)
+        
+        num_grids_this_fig = end_index - start_index
+        num_cols = min(num_grids_this_fig, max_cols)
+        num_rows = min(max_rows, math.ceil(num_grids_this_fig / num_cols))
+        
+        fig, axes = plt.subplots(num_rows, num_cols, figsize=(4*num_cols, 4*num_rows))
+        if num_rows == 1 and num_cols == 1:
+            axes = np.array([axes])
+        axes = axes.flatten()
+
+        for i, (identifier, data) in enumerate(list(colour_dict.items())[start_index:end_index]):
+            if i < len(axes):
+                ax = axes[i]
+                im = ax.imshow(data['permutation'], cmap=color_map, norm=norm)
+                ax.set_title(f"{data['description']}\nID: {identifier}", fontsize=8)
+                ax.axis('off')
+        
+        for j in range(i+1, len(axes)):
+            fig.delaxes(axes[j])
+
+        cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
+        cbar = fig.colorbar(im, cax=cbar_ax, ticks=range(10))
+        cbar.set_ticklabels(range(10))
+        
+        plt.tight_layout(rect=[0, 0, 0.9, 1])
+        
+        if num_figures > 1:
+            fig_save_path = f"{save_path[:-4]}_{fig_num+1}.png"
+        else:
+            fig_save_path = save_path
+        
+        plt.savefig(fig_save_path, bbox_inches='tight', dpi=300)
+        plt.close()
+
+        print(f"Saved colour_dict visualization to {fig_save_path}")
+
+
+def save_augmentations_on_same_plot(grid: np.ndarray, augmented_grids: List[List[Tuple[str, np.ndarray]]], save_path: str):
+    num_augmentations = len(augmented_grids[0])
+    fig, axes = plt.subplots(1, num_augmentations + 1, figsize=(20, 5))
+    
+    ps = ProjectStrings()
+    color_map = mcolors.ListedColormap(ps.CUSTOM_COLORS)
+    
+    norm = mcolors.BoundaryNorm(np.arange(-0.5, 10, 1), color_map.N)
+    
+    im = axes[0].imshow(grid, cmap=color_map, norm=norm)
+    axes[0].set_title("Original Grid")
+    axes[0].axis('off')
+
+    # Plot augmented grids
+    for j, (description, aug) in enumerate(augmented_grids[0], 1):
+        axes[j].imshow(aug, cmap=color_map, norm=norm)
+        axes[j].set_title(f"{description}\n{aug.shape}", fontsize=8)
+        axes[j].axis('off')
+
+    # Add a colorbar to the right of the entire plot
+    cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
+    cbar = fig.colorbar(im, cax=cbar_ax, ticks=range(10))
+    cbar.set_ticklabels(range(10))
+
+    plt.tight_layout(rect=[0, 0, 0.9, 1])  # Adjust the rect to make room for the colorbar
+    plt.savefig(save_path, bbox_inches='tight', dpi=300)
+    plt.close()
+
+    print(f"Saved augmentations visualization to {save_path}")
 
 
 def create_dataframe_from_lookup(lookup_list: dict) -> pd.DataFrame:
     rows = []
-    
-    # Iterate over each description in the lookup list
     for description, data in lookup_list.items():
         original_input = data["original"]
         color_permutations = data["color_permutations"]
         colour_maps = data["colour_maps"]
         
-        # For each color permutation, we add a row
         for permuted_grid, colour_map in zip(color_permutations, colour_maps):
             rows.append({
                 "Description (Geometric Augmentation)": description,
@@ -197,8 +295,7 @@ def create_dataframe_from_lookup(lookup_list: dict) -> pd.DataFrame:
                 "Permutation": permuted_grid,
                 "Colour Map": colour_map
             })
-    
-    # Create the DataFrame
+
     df = pd.DataFrame(rows)
     return df
 

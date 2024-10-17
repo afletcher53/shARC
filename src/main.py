@@ -39,6 +39,49 @@ def main():
 
     # dl.plot_solution(challenge_data['test_input'], f"{challenge_id}_test_input")
 
+    def get_augmented_training_examples(id: str):
+        sample = dl.get_specific_sample(id)
+        test_input = sample['test_input']
+        train_examples = sample['train_examples']
+        solution = sample['solution']
+
+        augmented_train_examples_input = []
+        augmented_train_examples_output = []
+        train_example_count = 0
+        for train_example in train_examples:
+            
+            train_example_input = train_example['input']
+            train_example_output = train_example['output']
+            
+            # Ensure inputs are in the correct format for generate_augmentations
+            if not isinstance(train_example_input[0], list):
+                train_example_input = [train_example_input]
+            if not isinstance(train_example_output[0], list):
+                train_example_output = [train_example_output]
+            
+            augmented_train_examples_input.append(generate_augmentations([train_example_input], challenge_id, "input", train_example_count))
+            augmented_train_examples_output.append(generate_augmentations([train_example_output], challenge_id, "output", train_example_count))
+            train_example_count += 1
+
+            print("")
+
+        print(augmented_train_examples_input)
+        # # Ensure test_input and solution are in the correct format
+        # if not isinstance(test_input[0], list):
+        #     test_input = [test_input]
+        # if not isinstance(solution[0], list):
+        #     solution = [solution]
+
+        # augmented_test_input = generate_augmentations([test_input])
+        # augmented_solution = generate_augmentations(solution)
+
+        # return augmented_train_examples_input, augmented_train_examples_output, augmented_test_input, augmented_solution
+
+
+
+    get_augmented_training_examples(challenge_id)
+        
+
     # get a specific solution grid
     solution = challenge_data['solution']
     

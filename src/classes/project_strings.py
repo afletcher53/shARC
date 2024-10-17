@@ -53,3 +53,18 @@ class ProjectStrings(BaseClassWithLogger):
 
     def __str__(self) -> str:
         return f"ProjectStrings: {self.available_datasets}, {self.get_seed}, {self.get_training_challenges_data_path}"
+
+    @property
+    def CUSTOM_COLORS(self) -> list:
+        return  [
+        'black',    # 0
+        'blue',     # 1
+        'red',      # 2
+        'green',    # 3
+        'yellow',   # 4
+        'grey',     # 5
+        'purple',   # 6
+        'orange',   # 7
+        'lightblue', # 8
+        'brown'     # 9
+    ]
