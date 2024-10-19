@@ -59,8 +59,29 @@ def main():
             if not isinstance(train_example_output[0], list):
                 train_example_output = [train_example_output]
             
-            augmented_train_examples_input.append(generate_augmentations([train_example_input], challenge_id, "input", train_example_count))
-            augmented_train_examples_output.append(generate_augmentations([train_example_output], challenge_id, "output", train_example_count))
+            aug_input_dict = generate_augmentations([train_example_input], challenge_id, "input", train_example_count)
+            aug_output_dict = generate_augmentations([train_example_output], challenge_id, "output", train_example_count)
+
+            # work out which one has the fewest unique augmentations
+            unique_augmentations_input = len(aug_input_dict)
+            unique_augmentations_output = len(aug_output_dict)
+            
+            final_pairs = []
+            if unique_augmentations_input < unique_augmentations_output:
+                # we want to keep only output augmentations that have a corresponding input augmentation matched on description hash and colour map hash
+                for output_augmentation in aug_output_dict:
+                    for input_augmentation in aug_input_dict:
+                        aug_output = aug_output_dict[output_augmentation]
+                        aug_input = aug_input_dict[input_augmentation]
+
+                        if aug_output['description_hash'] ==  aug_input['description_hash'] and aug_output['colour_map_hash'] == aug_input['colour_map_hash']:
+                            final_pairs.append((output_augmentation, input_augmentation))
+            else: 
+                for output_augmentation in aug_output_dict:
+                    for input_augmentation in aug_input_dict:
+                        if aug_output['description_hash'] ==  aug_input['description_hash'] and aug_output[output_augmentation]['colour_map_hash'] == aug_input[input_augmentation]['colour_map_hash']:
+                            final_pairs.append((output_augmentation, input_augmentation))
+
             train_example_count += 1
 
             print("")
