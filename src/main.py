@@ -1,5 +1,7 @@
+import random
 from matplotlib import pyplot as plt
 from matplotlib.colors import ListedColormap
+from sklearn.base import defaultdict
 
 from classes import ProjectStrings
 from classes.data_loader import DataLoader
@@ -38,6 +40,38 @@ def visualize_grid_pairs(valid_pairs):
         output_grid = pair[1]["permutation"]
         plot_grid_pair(input_grid, output_grid, i, custom_colors)
 
+
+def get_consistent_color_mapping(pairs):
+    # Get all unique colors from inputs
+    input_colors = set()
+    for pair in pairs:
+        input_colors.update(pair[0]["colour_map"].values())
+
+    # Get all unique colors from outputs
+    output_colors = set()
+    for pair in pairs:
+        output_colors.update(pair[1]["colour_map"].values())
+
+    # Find new colors in outputs
+    new_colors = output_colors - input_colors
+
+    # Create a consistent mapping for new colors
+    consistent_mapping = {color: i for i, color in enumerate(new_colors)}
+
+    return consistent_mapping, input_colors
+
+def apply_consistent_mapping(pair, consistent_mapping, input_colors):
+    input_map = pair[0]["colour_map"]
+    output_map = pair[1]["colour_map"]
+
+    new_output_map = {}
+    for key, color in output_map.items():
+        if color in input_colors:
+            new_output_map[key] = color
+        else:
+            new_output_map[key] = consistent_mapping[color]
+
+    return (pair[0], {"colour_map": new_output_map})
 
 def get_augmented_training_examples(dataloader: DataLoader, id: str):
     sample = dataloader.get_specific_sample(id)
@@ -99,6 +133,9 @@ def get_augmented_training_examples(dataloader: DataLoader, id: str):
         # visualize_grid_pairs(valid_pairs)
         train_example_count += 1
 
+    def subtract_colour_maps(colour_map_1, colour_map_2):
+        return {key: value for key, value in colour_map_2.items() if key not in colour_map_1 or colour_map_1[key] != value}
+
     grouped_by_description_hash = {}
     for pair in valid_pairs:
         description_hash = pair[0]["description_hash"]
@@ -106,28 +143,35 @@ def get_augmented_training_examples(dataloader: DataLoader, id: str):
             grouped_by_description_hash[description_hash] = []
         grouped_by_description_hash[description_hash].append(pair)
 
-    #### NOT SURE WHERE TO GO FROM HERE ####
-
-      # Randomly form groups of 4 pairs from grouped_by_description_hash to form training examples
-    import random
-
-    training_groups = []
+    delta_maps = []
     for description_hash, pairs in grouped_by_description_hash.items():
-        # Shuffle the pairs to ensure randomness
-        random.shuffle(pairs)
-        
-        # Create groups of 4 pairs
-        for i in range(0, len(pairs), 4):
-            group = pairs[i:i+4]
-            
-            # Only add complete groups of 4
-            if len(group) == 4:
-                training_groups.append(group)
+        for pair in pairs:
+            delta_map = subtract_colour_maps(pair[0]["colour_map"], pair[1]["colour_map"])
+            delta_maps.append((description_hash, delta_map, pair))
 
+    # Group by both description_hash and delta_map
+    grouped_by_description_and_delta = defaultdict(list)
+    for description_hash, delta_map, original_pair in delta_maps:
+        # Convert delta_map to a frozenset of items for hashability
+        delta_map_key = frozenset(delta_map.items())
+        grouped_by_description_and_delta[(description_hash, delta_map_key)].append(original_pair)
+
+    # Create training examples
+    training_examples = []
+    for group in grouped_by_description_and_delta.values():
+        if len(group) >= 4:
+            # Randomly select 4 pairs from the group
+            selected_pairs = random.sample(group, 4)
+            training_examples.append(selected_pairs)
+    # shuffle training examples within each group
+    for group in training_examples:
+        random.shuffle(group)
     project_strings = ProjectStrings()
-    custom_colors = project_strings.CUSTOM_COLORS
-    visualize_all_training_examples(training_groups, custom_colors)
-        
+    custom_colors = project_strings.CUSTOM_COLORS   
+
+    visualize_all_training_examples(training_examples, custom_colors)
+
+
     return valid_pairs
 
 def visualize_training_example(training_example, custom_colors, example_index):
