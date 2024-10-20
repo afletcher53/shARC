@@ -96,7 +96,7 @@ def get_augmented_training_examples(dataloader: DataLoader, id: str):
                 ):
                     valid_pairs.append(pair)
 
-        visualize_grid_pairs(valid_pairs)
+        # visualize_grid_pairs(valid_pairs)
         train_example_count += 1
 
     grouped_by_description_hash = {}
@@ -108,8 +108,54 @@ def get_augmented_training_examples(dataloader: DataLoader, id: str):
 
     #### NOT SURE WHERE TO GO FROM HERE ####
 
+      # Randomly form groups of 4 pairs from grouped_by_description_hash to form training examples
+    import random
+
+    training_groups = []
+    for description_hash, pairs in grouped_by_description_hash.items():
+        # Shuffle the pairs to ensure randomness
+        random.shuffle(pairs)
+        
+        # Create groups of 4 pairs
+        for i in range(0, len(pairs), 4):
+            group = pairs[i:i+4]
+            
+            # Only add complete groups of 4
+            if len(group) == 4:
+                training_groups.append(group)
+
+    project_strings = ProjectStrings()
+    custom_colors = project_strings.CUSTOM_COLORS
+    visualize_all_training_examples(training_groups, custom_colors)
+        
     return valid_pairs
 
+def visualize_training_example(training_example, custom_colors, example_index):
+    fig, axes = plt.subplots(4, 2, figsize=(12, 20))
+    fig.suptitle(f"Training Example {example_index + 1}")
+
+    cmap = ListedColormap(custom_colors)
+    norm = plt.Normalize(0, len(custom_colors) - 1)
+
+    for i, pair in enumerate(training_example):
+        input_grid = pair[0]["permutation"]
+        output_grid = pair[1]["permutation"]
+
+        axes[i, 0].imshow(input_grid, cmap=cmap, norm=norm)
+        axes[i, 0].set_title(f"Input Grid {i + 1}")
+        axes[i, 0].axis("off")
+
+        axes[i, 1].imshow(output_grid, cmap=cmap, norm=norm)
+        axes[i, 1].set_title(f"Output Grid {i + 1}")
+        axes[i, 1].axis("off")
+
+    plt.tight_layout()
+    plt.savefig(f"output/training_example_{example_index}.png")
+    plt.close(fig)
+
+def visualize_all_training_examples(training_groups, custom_colors):
+    for i, training_example in enumerate(training_groups):
+        visualize_training_example(training_example, custom_colors, i)
 
 def main():
     dl = DataLoader()
