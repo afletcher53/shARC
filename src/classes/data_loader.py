@@ -1,5 +1,6 @@
 import os
 import json
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from .base_class_with_logger import BaseClassWithLogger
@@ -248,26 +249,49 @@ class DataLoader(BaseClassWithLogger):
         self, grid: np.ndarray, file_name: str, output_dir: str = "output"
     ):
         """
-        Given a grid as a numpy array, plots the grid as an image.
-
+        Given a grid as a numpy array, plots the grid as an image using ARC custom colors.
+        
         :param grid: A numpy array representing the grid to be plotted.
+        :param file_name: Name for the output file
         :param output_dir: Directory where the plot image will be saved.
         """
-
+        # Create discrete colormap using ProjectStrings custom colors
+        colors = self.strings.CUSTOM_COLORS
+        n_colors = len(colors)
+        
+        # Create figure and axis
         plt.figure(figsize=(6, 6))
-        plt.imshow(grid, cmap="viridis", interpolation="nearest")
-        plt.axis("off")
-
+        
+        # Create a masked array to handle values outside our color range
+        masked_grid = np.ma.masked_where(grid >= n_colors, grid)
+        
+        # Plot the grid using custom colors
+        plt.imshow(
+            masked_grid,
+            cmap=matplotlib.colors.ListedColormap(colors),
+            interpolation='nearest',
+            vmin=0,
+            vmax=len(colors)-1
+        )
+        
+        # Add gridlines
+        plt.grid(True, which='both', color='grey', linewidth=0.5, alpha=0.5)
+        plt.xticks(np.arange(-0.5, grid.shape[1], 1), [])
+        plt.yticks(np.arange(-0.5, grid.shape[0], 1), [])
+        
         plt.title(f"Grid for {file_name}")
-
+        plt.axis("on")  # Show the axis for grid lines
+        
+        # Ensure output directory exists
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-
+            
+        # Save and show the plot
         output_file_path = os.path.join(output_dir, f"{file_name}.png")
-        plt.show()
-        plt.savefig(output_file_path)
+        plt.savefig(output_file_path, bbox_inches='tight', dpi=300)
+        # plt.show()
         plt.close()
-
+        
         self.logger.info(f"Solution grid saved as {output_file_path}")
 
     def plot_multiple_solutions(self, grids: list, output_dir: str = "output"):

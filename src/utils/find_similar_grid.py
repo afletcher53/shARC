@@ -73,8 +73,8 @@ def create_colour_blind_grids(grid: np.ndarray) -> List[np.ndarray]:
 def preprocess_grid(grid: np.ndarray) -> np.ndarray:
     """Preprocess the input grid to ensure consistent shape and data type."""
     grid = np.array(grid)
-    if grid.shape == (1, 9, 9):
-        grid = grid[0]
+    if grid.ndim > 2 and grid.shape[0] == 1:
+        grid = grid.squeeze(axis=0)
     return grid.astype(int)
 
 
