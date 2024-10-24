@@ -205,6 +205,20 @@ def main():
     # dl.plot_solution(challenge_data["test_input"], f"{challenge_id}_test_input")
 
     training_examples_cid = get_augmented_training_examples(dl, challenge_id, visualize=False)
+    # TODO: what exactly does training_examples_cid look like?
+    #  from the code, it looks like this below - is this correct? what does pair[0] and pair[1] correspond to? input/output?
+    # training_examples_cid = [
+    #   [
+    #       {
+    #           "colour_map": {int1: int2, int2: int3, ...},
+    #           "description": "str",
+    #       },
+    #       {
+    #           "colour_map": {int1: int2, int2: int3, ...},
+    #           "description": "str"},
+    #   ],
+    # ]
+
 
     # for each training_example_cid, find the consistent colour map delta
 
@@ -216,6 +230,7 @@ def main():
             colour_map_deltas.append(subtract_colour_maps(pair[0]["colour_map"], pair[1]["colour_map"]))
             geometric_deltas.append(pair[0]["description"])
         # assert that all the geometric deltas are the same
+        # JC: I see, so these asserts are ensuring that the colour maps are aligned across different i/o pairs?
         assert all(delta == geometric_deltas[0] for delta in geometric_deltas)
         # assert that all the colour map deltas are the same
         assert all(delta == colour_map_deltas[0] for delta in colour_map_deltas)

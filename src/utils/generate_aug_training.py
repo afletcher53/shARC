@@ -28,7 +28,10 @@ def generate_augmentation_pairs(input_data, output_data, id, train_example_count
     return final_pairs
 
 def validate_pair(pair):
-    """Validate a single augmentation pair."""
+    """Validate a single augmentation pair.
+    TODO: it looks like this is checking that, within an input/output pair, the input and output colour maps align
+     not sure where is the function that checks whether the colour maps across i/o pairs align?
+    """
     set_input = pair[0]["colour_map"]
     set_output = pair[1]["colour_map"]
     lowest_card_set = set_input if len(set_input) < len(set_output) else set_output
@@ -41,9 +44,14 @@ def validate_pair(pair):
     return True
 
 def subtract_colour_maps(colour_map_1, colour_map_2):
-    """Calculate the difference between two color maps."""
+    """Calculate the difference between two color maps.
+    JC note: this looks like colour_map_2 - colour_map_1
+    TODO: why also remove the elements from colour_map_2 that colour_map_1 maps to a different value?
+     from where it's used (main.py line 230) it looks like, for each pair of i/o training examples,
+     the colour map of the input will be subtracted from the colour map of the output
+    """
     return {key: value for key, value in colour_map_2.items() 
-            if key not in colour_map_1 or colour_map_1[key] != value}
+            if (key not in colour_map_1) or (colour_map_1[key] != value)}
 
 def group_pairs_by_description(valid_pairs):
     """Group pairs by their description hash."""
