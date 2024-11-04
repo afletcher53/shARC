@@ -95,10 +95,13 @@ def select_training_examples(grouped_pairs):
 def get_augmented_training_examples(dataloader: DataLoader, id: str, visualize: bool = False):
     """Main function to get augmented training examples."""
     # Step 1: Get the sample and train examples
+    #print("Step 1: Get the sample and train examples")
     sample = dataloader.get_specific_sample(id)
     train_examples = sample["train_examples"]
-    
+
     # Step 2: Process each training example
+    #print("Step 2: Process each training example")
+
     valid_pairs = []
     for train_example_count, train_example in enumerate(train_examples):
         # Prepare input and output
@@ -113,11 +116,13 @@ def get_augmented_training_examples(dataloader: DataLoader, id: str, visualize: 
         valid_pairs.extend([pair for pair in final_pairs if validate_pair(pair)])
     
     # Step 3: Group and process pairs
+    #print("Step 3: Group and process pairs")
     grouped_by_hash = group_pairs_by_description(valid_pairs)
     delta_maps = create_delta_maps(grouped_by_hash)
     grouped_final = group_by_description_and_delta(delta_maps)
     
     # Step 4: Create training examples
+    #print("Step 4: Create training examples")
     training_examples = select_training_examples(grouped_final)
     
     # Step 5: Visualize results

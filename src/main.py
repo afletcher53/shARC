@@ -183,7 +183,7 @@ def plot_transformation_set(dl, challenge_id, training_examples, test_input, sol
 
 def main():
     dl = DataLoader()
-    training_data = dl.load_dataset("training")
+    training_data = dl.load_dataset("training",)
 
     total_training_inputs = 0
     for key, value in training_data.items():
@@ -203,8 +203,13 @@ def main():
     # dl.plot_train_and_test_examples({challenge_id: challenge_data})
 
     # dl.plot_solution(challenge_data["test_input"], f"{challenge_id}_test_input")
-
+    #print("Augmenting training examples.")
     training_examples_cid = get_augmented_training_examples(dl, challenge_id, visualize=False)
+    #print("Training examples augmented.")
+    # print(len(training_examples_cid))  # 64 (permutations)
+    # print(len(training_examples_cid[0]))  # 4 (training example I/O pairs)
+    # print(len(training_examples_cid[0][0]))  # 2 (input, output grid)
+
     # TODO: what exactly does training_examples_cid look like?
     #  from the code, it looks like this below - is this correct? what does pair[0] and pair[1] correspond to? input/output?
     # training_examples_cid = [
@@ -212,11 +217,17 @@ def main():
     #       {
     #           "colour_map": {int1: int2, int2: int3, ...},
     #           "description": "str",
+    #           "challenge_id": "",
+    #           "original": [[],...],
+    #           "permutation": [[]]...],
     #       },
     #       {
     #           "colour_map": {int1: int2, int2: int3, ...},
     #           "description": "str"},
+    #           ...
     #   ],
+
+
     # ]
 
 
@@ -227,6 +238,7 @@ def main():
         colour_map_deltas = []
         geometric_deltas = []
         for pair in training_example:
+            # TODO: if we feel like it, compare colour sizes first, before substracting the smaller c map from the larger one
             colour_map_deltas.append(subtract_colour_maps(pair[0]["colour_map"], pair[1]["colour_map"]))
             geometric_deltas.append(pair[0]["description"])
         # assert that all the geometric deltas are the same
@@ -268,8 +280,6 @@ def main():
             transformed_solution,
             idx
         )
-            
-
 
 
     similar_grids, original_idx = find_similar_solutions(solution, dl, 5)
@@ -278,6 +288,13 @@ def main():
         dl.plot_solution(grid, f"similar_grid_{idx}")
 
     dl.plot_solution(solution, "original_solution")
+
+
+def remain():
+    pass
+    # TODO: Jason to write code to pass the augmented training examples to LLM in string form
+    #  for inference and then map prediction from string form back to array of arrays to
+    #  compare with ground truth
 
 
 if __name__ == "__main__":
