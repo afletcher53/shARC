@@ -163,6 +163,7 @@ def demo(challenge_id="007bbfb7", dl=None, training_data=None):
     training_examples_cid = get_augmented_training_examples(dl, challenge_id, visualize=False)
     print("Training examples augmented.")
     example_permutation = training_examples_cid[0]
+    print(f"EXAMPLE PERMUTATION: {example_permutation}")
 
     def prepare_instance(io_pairs):
         io_pairs_strings = []
