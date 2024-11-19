@@ -21,7 +21,7 @@ echo $CUDA_VISIBLE_DEVICES
 
 module load Anaconda3/2022.05
 
-conda activate shARC_venv
+source activate ../miniconda3/envs/shARC_venv
 
 python $pyscript
 
