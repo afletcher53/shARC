@@ -119,7 +119,6 @@ def pred_v_gt(predGrid, gtGrid, print_result=True):
 def main():
     # tokenizer, outlines_model = load_outlines_model(target_model="meta-llama/Llama-3.2-3B-Instruct")
     tokenizer, outlines_model = load_outlines_model(target_model="microsoft/Phi-3.5-mini-instruct")
-
     print("Model loaded")
     print("Running inference...")
     for challenge_data_instance in load_data(first_n=2):
