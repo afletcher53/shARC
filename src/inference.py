@@ -1,4 +1,4 @@
-# pip install pydantic torch transformers datasets accelerate outlines
+# pip install pydantic torch transformers datasets accelerate outlines matplotlib scikit-learn
 import os
 
 hf_cache_dir = "/mnt/parscratch/users/acp23jlc/phd_projects/hf_cache/"  # REPLACE WITH YOUR OWN HF CACHE DIR HERE
@@ -6,6 +6,7 @@ hf_cache_dir = "/mnt/parscratch/users/acp23jlc/phd_projects/hf_cache/"  # REPLAC
 if hf_cache_dir:
     os.environ['HF_HOME'] = hf_cache_dir
 
+from typing import List
 import numpy as np
 import time
 import torch
@@ -39,17 +40,16 @@ from utils.generate_aug_training import get_augmented_training_examples
 #     return tokenizer, model
 
 class OutputGrid(BaseModel):
-    outputGrid: list[list[int]]
+    outputGrid: List[List[int]]
 
 def load_outlines_model(target_model="meta-llama/Llama-3.2-3B-Instruct"):
     with open("my_hf_token.txt", "r") as f:  # REPLACE WITH TXT FPATH CONTAINING YOUR HUGGINGFACE TOKEN
         my_hf_token = f.read().strip()
     login(my_hf_token)
-    tokenizer = AutoTokenizer.from_pretrained(target_model,
-                                              padding_side="left")
-
     _model = outlines.models.transformers(target_model, model_kwargs={"device_map": "auto"}, tokenizer_kwargs={"padding_side": "left"})
     generator = outlines.generate.json(_model, OutputGrid)
+    tokenizer = AutoTokenizer.from_pretrained(target_model,
+                                              padding_side="left")
 
     return tokenizer, generator
 
@@ -132,7 +132,7 @@ def main():
         print("Example output grid:")
         print(output_grid)
 
-        error = pred_v_gt(output_grid, ground_truth_grid)
+        error = pred_v_gt(output_grid["output_grid"], ground_truth_grid)
         print(f"Example error: {error}")
         print(f"Example ground truth grid: {ground_truth_grid}")
 
