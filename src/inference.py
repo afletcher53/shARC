@@ -45,6 +45,8 @@ from utils.generate_aug_training import get_augmented_training_examples
 
 class OutputGrid(BaseModel):
     outputGrid: List[List[int]]
+    # TODO: we might consider dynamically constrain the dimensions of the outputs based on an upstream LLM prediction of grid size
+    # TODO: this predicted info can also appear as part of the prompt
 
 def load_outlines_model(target_model="meta-llama/Llama-3.2-3B-Instruct"):
     with open("my_hf_token.txt", "r") as f:  # REPLACE WITH TXT FPATH CONTAINING YOUR HUGGINGFACE TOKEN
@@ -150,7 +152,10 @@ def main():
         chat_templated_prompt = tokenizer.apply_chat_template(msg, tokenize=False, add_generation_prompt=True)
 
         output_grid = outlines_model(chat_templated_prompt).outputGrid
-
+        # TODO: this is currently run in serial, to be parallelised using the outlines API
+        # TODO: train on original unpermuted grids (200?), hold out test set (50) i.e. offline fine-tuning 
+        # TODO: implement test-time fine-tuning
+         
         error, isShapeMismatch = pred_v_gt(output_grid, ground_truth_grid)
         errors.append(error)
         areShapeMismatches.append(isShapeMismatch)
