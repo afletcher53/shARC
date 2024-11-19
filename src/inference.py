@@ -46,7 +46,8 @@ def load_outlines_model(target_model="meta-llama/Llama-3.2-3B-Instruct"):
     with open("my_hf_token.txt", "r") as f:  # REPLACE WITH TXT FPATH CONTAINING YOUR HUGGINGFACE TOKEN
         my_hf_token = f.read().strip()
     login(my_hf_token)
-    _model = outlines.models.transformers(target_model, model_kwargs={"device_map": "auto"}, tokenizer_kwargs={"padding_side": "left"})
+    _model = outlines.models.transformers(target_model, model_kwargs={"device_map": "auto"},
+                                          tokenizer_kwargs={"padding_side": "left"})
     generator = outlines.generate.json(_model, OutputGrid)
     tokenizer = AutoTokenizer.from_pretrained(target_model,
                                               padding_side="left")
@@ -116,7 +117,9 @@ def pred_v_gt(predGrid, gtGrid, print_result=True):
     return error
 
 def main():
-    tokenizer, outlines_model = load_outlines_model(target_model="meta-llama/Llama-3.2-3B-Instruct")
+    # tokenizer, outlines_model = load_outlines_model(target_model="meta-llama/Llama-3.2-3B-Instruct")
+    tokenizer, outlines_model = load_outlines_model(target_model="microsoft/Phi-3.5-mini-instruct")
+
     print("Model loaded")
     print("Running inference...")
     for challenge_data_instance in load_data(first_n=2):
