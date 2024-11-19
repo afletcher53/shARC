@@ -48,6 +48,7 @@ def load_outlines_model(target_model="meta-llama/Llama-3.2-3B-Instruct"):
     login(my_hf_token)
     _model = outlines.models.transformers(target_model, model_kwargs={"device_map": "auto"},
                                           tokenizer_kwargs={"padding_side": "left"})
+
     generator = outlines.generate.json(_model, OutputGrid)
     tokenizer = AutoTokenizer.from_pretrained(target_model,
                                               padding_side="left")
@@ -117,8 +118,9 @@ def pred_v_gt(predGrid, gtGrid, print_result=True):
     return error
 
 def main():
-    # tokenizer, outlines_model = load_outlines_model(target_model="meta-llama/Llama-3.2-3B-Instruct")
-    tokenizer, outlines_model = load_outlines_model(target_model="microsoft/Phi-3.5-mini-instruct")
+    print("Loading model...")
+    tokenizer, outlines_model = load_outlines_model(target_model="meta-llama/Llama-3.2-3B-Instruct")
+    # tokenizer, outlines_model = load_outlines_model(target_model="microsoft/Phi-3.5-mini-instruct")
     print("Model loaded")
     print("Running inference...")
     for challenge_data_instance in load_data(first_n=2):
@@ -129,7 +131,11 @@ def main():
         chat_templated_prompt = tokenizer.apply_chat_template(msg, tokenize=False, add_generation_prompt=True)
         print("Example input:")
         print(chat_templated_prompt)
-        output_grid = outlines_model(chat_templated_prompt)
+
+        out = outlines_model(chat_templated_prompt)
+        print("Example output:")
+        print(out)
+        output_grid = out.outputGrid
 
         print("Example output grid:")
         print(output_grid)
