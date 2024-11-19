@@ -1,11 +1,15 @@
 # pip install pydantic torch transformers datasets accelerate outlines==0.1.3 matplotlib scikit-learn
 import os
 
-hf_cache_dir = "/mnt/parscratch/users/acp23jlc/phd_projects/hf_cache/"  # REPLACE WITH YOUR OWN HF CACHE DIR HERE
+with open("my_absolute_fpaths.txt") as f:
+    fpaths = [line.strip() for line in f.readlines()]
+
+hf_cache_dir = fpaths[0]  # REPLACE WITH YOUR OWN HF CACHE DIR HERE
 # hf_cache_dir = ""
 if hf_cache_dir:
     os.environ['HF_HOME'] = hf_cache_dir
 
+from pprint import pprint
 from typing import List
 import numpy as np
 import time
@@ -82,8 +86,8 @@ def data_instance_to_chat_input(challenge_data_instance, systemPrompt):
     messages = [{"role": "user",
                  "content": f"You are given example pairs of input and output grids "
                             f"which follow the same transformation rule. "
-                            f"Infer this rule, transform the final input grid and predict its corresponding output grid."
-                            f"Return the output grid as a list of list of integers:\n\n{instance_string}"}]
+                            f"Infer this rule, transform the final input grid and predict its corresponding output grid. "
+                            f"Return the output grid as a list of list of integers.\n\n{instance_string}"}]
 
     if systemPrompt:
         messages.insert(0, {"role": "system", "content": systemPrompt})
@@ -94,20 +98,25 @@ def data_instance_to_chat_input(challenge_data_instance, systemPrompt):
 def load_data(first_n=2):
     dl = DataLoader()
     training_data = dl.load_dataset("training",
-                                    dataset_locations_override=("../data/arc-agi_training_challenges.json",
-                                                                "../data/arc-agi_training_solutions.json"))
+                                    dataset_locations_override=(fpaths[1], fpaths[2]))
     print(f"Training data loaded. Number of instances: {len(set(training_data.keys()))}")
     ids = list(training_data.keys())
     for i in range(first_n):
         yield dl.get_specific_sample(ids[i])
 
 
-def pred_v_gt(predGrid, gtGrid, print_result=True):
-    predGrid = np.array(predGrid)
+def pred_v_gt(predGrid, gtGrid, print_result=False):
     gtGrid = np.array(gtGrid)
+    try:
+        predGrid = np.array(predGrid)
+    except ValueError:
+        print("Predicted arrays are jagged and do not form a grid.")
+        return gtGrid.shape[0]*gtGrid.shape[1], True
+    
+    
     if predGrid.shape != gtGrid.shape:
         print(f"Grid shape mismatch - gt: {gtGrid.shape}, pred: {predGrid.shape}")
-        return gtGrid.shape[0]*gtGrid.shape[1]  # counts as getting all cells wrong
+        return gtGrid.shape[0]*gtGrid.shape[1], True  # counts as getting all cells wrong, flag to indicate isShapeMismatch
 
     diffGrid = predGrid != gtGrid
     error = np.sum(diffGrid)
@@ -115,36 +124,49 @@ def pred_v_gt(predGrid, gtGrid, print_result=True):
         print("Printing difference grid (TRUE = mismatch between pred and gt found:")
         print(diffGrid)
 
-    return error
+    return error, False # flag to indicate error is not shape-mismatch
 
 def main():
+    target_model = "meta-llama/Llama-3.2-1B-Instruct"
+    run_on_n_data_samples = 200
     print("Loading model...")
-    tokenizer, outlines_model = load_outlines_model(target_model="meta-llama/Llama-3.2-3B-Instruct")
+    tokenizer, outlines_model = load_outlines_model(target_model=target_model)
     # tokenizer, outlines_model = load_outlines_model(target_model="microsoft/Phi-3.5-mini-instruct")
     print("Model loaded")
     print("Running inference...")
-    for challenge_data_instance in load_data(first_n=2):
+
+    errors = []
+    areShapeMismatches = []
+    gtGridSizes = []
+
+    start_time = time.time()
+    for i, challenge_data_instance in enumerate(load_data(first_n=run_on_n_data_samples)):
+        if i % 5 == 0: 
+            print(f"Running sample {i+1} out of {run_on_n_data_samples}. Time lapsed: {(time.time()-start_time)/60:.2f} minutes.", flush=True)
         msg = data_instance_to_chat_input(challenge_data_instance,
                                           systemPrompt="You are a helpful assistant that obeys instructions.")
-        ground_truth_grid = challenge_data_instance["solution"]
+        ground_truth_grid = challenge_data_instance["solution"][0]
 
         chat_templated_prompt = tokenizer.apply_chat_template(msg, tokenize=False, add_generation_prompt=True)
-        print("Example input:")
-        print(chat_templated_prompt)
 
-        out = outlines_model(chat_templated_prompt)
-        print("Example output:")
-        print(out)
-        output_grid = out.outputGrid
+        output_grid = outlines_model(chat_templated_prompt).outputGrid
 
-        print("Example output grid:")
-        print(output_grid)
-
-        error = pred_v_gt(output_grid["output_grid"], ground_truth_grid)
-        print(f"Example error: {error}")
-        print(f"Example ground truth grid: {ground_truth_grid}")
+        error, isShapeMismatch = pred_v_gt(output_grid, ground_truth_grid)
+        errors.append(error)
+        areShapeMismatches.append(isShapeMismatch)
+        gtGridSizes.append(len(ground_truth_grid)*len(ground_truth_grid[0]))
+    
+    relative_errors = [error/gtGridSize for error, gtGridSize in zip(errors, gtGridSizes)]
 
     print("Inference complete")
+
+    print("SUMMARY")
+    print(f"Model: {target_model}")
+    print(f"No. of samples: {run_on_n_data_samples}")
+    print(f"No. of Exact grid matches: {errors.count(0)}")
+    print(f"No. of instances where predicted grid shape != ground truth grid shape: {areShapeMismatches.count(True)}")
+    print(f"Mean 'relative' error (i.e. wrong cells divided by all cells in ground truth grid): {np.mean(relative_errors)}")
+
 
 
 if __name__ == "__main__":
