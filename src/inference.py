@@ -1,4 +1,4 @@
-# pip install pydantic torch transformers datasets accelerate outlines matplotlib scikit-learn
+# pip install pydantic torch transformers datasets accelerate outlines==0.1.3 matplotlib scikit-learn
 import os
 
 hf_cache_dir = "/mnt/parscratch/users/acp23jlc/phd_projects/hf_cache/"  # REPLACE WITH YOUR OWN HF CACHE DIR HERE
