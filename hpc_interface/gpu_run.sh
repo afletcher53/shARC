@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #  see https://github.com/yaacov/argparse-sh/tree/main for details
-source argparse-sh/argparse.sh
+source hpc_interface/argparse-sh/argparse.sh
 
 define_arg "pyscript" "" "Python script to be run" "string" "true"
 define_arg "cpu_mem" "82G" "Corresponds to #SBATCH --mem=" "string" "false"
