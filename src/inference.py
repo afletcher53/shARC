@@ -212,4 +212,4 @@ def serial_inference():
 
 
 if __name__ == "__main__":
-    batched_inference(batch_size=10)
+    batched_inference(batch_size=3)
