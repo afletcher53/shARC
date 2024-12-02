@@ -1,4 +1,4 @@
-# pip install pydantic torch transformers datasets accelerate outlines==0.1.3 matplotlib scikit-learn
+# pip install pydantic torch transformers datasets accelerate outlines==0.1.3 matplotlib scikit-learn numpydantic
 import os
 
 with open("my_absolute_fpaths.txt") as f:
@@ -21,12 +21,16 @@ import outlines
 
 from classes.data_loader import DataLoader
 from utils.generate_aug_training import get_augmented_training_examples
+from numpydantic import NDArray, Shape
 
+# class OutputGrid(BaseModel):
+#     outputGrid: List[List[int]]
 
 class OutputGrid(BaseModel):
-    outputGrid: List[List[int]]
-    # TODO: we might consider dynamically constrain the dimensions of the outputs based on an upstream LLM prediction of grid size
-    # TODO: this predicted info can also appear as part of the prompt
+    outputGrid: NDArray[Shape["* x, * y"], int]
+    # TODO: we might consider dynamically constrain the dimensions of the outputs
+    #  based on an upstream LLM prediction of grid size
+    #  - this predicted info can also appear as part of the prompt
 
 def load_outlines_model(target_model="meta-llama/Llama-3.2-3B-Instruct"):
     with open("my_hf_token.txt", "r") as f:  # REPLACE WITH TXT FPATH CONTAINING YOUR HUGGINGFACE TOKEN
@@ -145,6 +149,9 @@ def batched_inference(batch_size=3):
         chat_templated_prompts = tokenizer.apply_chat_template(batch_msgs, tokenize=False, add_generation_prompt=True)
 
         outputs = outlines_model(chat_templated_prompts)
+        if i == 0:
+            print(f"Example output:")
+            print(outputs[0])
         output_grids = [x.outputGrid for x in outputs]
 
         compares = [pred_v_gt(output_grid, ground_truth_grid)
