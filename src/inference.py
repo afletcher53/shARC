@@ -23,14 +23,15 @@ from classes.data_loader import DataLoader
 from utils.generate_aug_training import get_augmented_training_examples
 from numpydantic import NDArray, Shape
 
-# class OutputGrid(BaseModel):
-#     outputGrid: List[List[int]]
-
 class OutputGrid(BaseModel):
-    outputGrid: NDArray[Shape["* x, * y"], int]
-    # TODO: we might consider dynamically constrain the dimensions of the outputs
-    #  based on an upstream LLM prediction of grid size
-    #  - this predicted info can also appear as part of the prompt
+    outputGrid: List[List[int]]
+
+# class OutputGrid(BaseModel):
+#     outputGrid: NDArray[Shape["*, *"], int]
+#     # TODO: we might consider dynamically constrain the dimensions of the outputs
+#     #  based on an upstream LLM prediction of grid size
+#     #  - this predicted info can also appear as part of the prompt
+# TODO: this is currently problematic because outlines cannot build FST for this - we'll need a 2-stage approach, first predict array shape, then predict the arrays themselves
 
 def load_outlines_model(target_model="meta-llama/Llama-3.2-3B-Instruct"):
     with open("my_hf_token.txt", "r") as f:  # REPLACE WITH TXT FPATH CONTAINING YOUR HUGGINGFACE TOKEN
