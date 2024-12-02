@@ -23,26 +23,6 @@ from classes.data_loader import DataLoader
 from utils.generate_aug_training import get_augmented_training_examples
 
 
-
-# def load_tokenizer_and_model(target_model="meta-llama/Llama-3.2-3B-Instruct"):
-#     torch_dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
-#
-#     with open("my_hf_token.txt", "r") as f:  # REPLACE WITH TXT FPATH CONTAINING YOUR HUGGINGFACE TOKEN
-#         my_hf_token = f.read().strip()
-#     login(my_hf_token)
-#
-#     tokenizer = AutoTokenizer.from_pretrained(target_model,
-#                                               torch_dtype=torch_dtype,
-#                                               padding_side="left")
-#     if tokenizer.pad_token is None:
-#         tokenizer.pad_token = tokenizer.eos_token
-#
-#     model = AutoModelForCausalLM.from_pretrained(target_model,
-#                                                  torch_dtype=torch_dtype,
-#                                                  device_map="auto")
-#
-#     return tokenizer, model
-
 class OutputGrid(BaseModel):
     outputGrid: List[List[int]]
     # TODO: we might consider dynamically constrain the dimensions of the outputs based on an upstream LLM prediction of grid size
@@ -137,13 +117,13 @@ def pred_v_gt(predGrid, gtGrid, print_result=False):
 
 def batched_inference(batch_size=3):
     target_model = "meta-llama/Llama-3.2-1B-Instruct"
-    run_on_n_data_samples = 200
+    run_on_n_data_samples = 30
     systemPrompt = "You are a helpful assistant that obeys instructions."
 
-    print("Loading model...")
+    print("Loading model...", flush=True)
     tokenizer, outlines_model = load_outlines_model(target_model=target_model)
-    print("Model loaded")
-    print("Running inference...")
+    print("Model loaded", flush=True)
+    print("Running inference...", flush=True)
 
     dl, ids = get_dataloader_and_ids(dataset_type="training")
 
@@ -153,7 +133,7 @@ def batched_inference(batch_size=3):
 
     start_time = time.time()
     for i in range(0, run_on_n_data_samples, batch_size):
-        print(f"Processing examples starting from {i}... time lapsed: {(time.time()-start_time)/60:.2f} minutes")
+        print(f"Processing examples starting from {i}... time lapsed: {(time.time()-start_time)/60:.2f} minutes", flush=True)
         if (i + batch_size) > run_on_n_data_samples:
             batch = [dl.get_specific_sample(example_id) for example_id in ids[i:run_on_n_data_samples]]
         else:
@@ -221,15 +201,15 @@ def serial_inference():
     
     relative_errors = [error/gtGridSize for error, gtGridSize in zip(errors, gtGridSizes)]
 
-    print("Inference complete")
+    print("Inference complete", flush=True)
 
     print("SUMMARY")
     print(f"Model: {target_model}")
     print(f"No. of samples: {run_on_n_data_samples}")
     print(f"No. of Exact grid matches: {errors.count(0)}")
     print(f"No. of instances where predicted grid shape != ground truth grid shape: {areShapeMismatches.count(True)}")
-    print(f"Mean 'relative' error (i.e. wrong cells divided by all cells in ground truth grid): {np.mean(relative_errors)}")
+    print(f"Mean 'relative' error (i.e. wrong cells divided by all cells in ground truth grid): {np.mean(relative_errors)}", flush=True)
 
 
 if __name__ == "__main__":
-    batched_inference(batch_size=5)
+    batched_inference(batch_size=10)
