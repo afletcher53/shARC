@@ -174,50 +174,5 @@ def batched_inference(batch_size=3):
     print(f"Mean 'relative' error (i.e. wrong cells divided by all cells in ground truth grid): {np.mean(relative_errors)}")
 
 
-
-def serial_inference():
-    target_model = "meta-llama/Llama-3.2-1B-Instruct"
-    run_on_n_data_samples = 200
-    print("Loading model...")
-    tokenizer, outlines_model = load_outlines_model(target_model=target_model)
-    print("Model loaded")
-    print("Running inference...")
-
-    errors = []
-    areShapeMismatches = []
-    gtGridSizes = []
-
-    start_time = time.time()
-    for i, challenge_data_instance in enumerate(load_data(first_n=run_on_n_data_samples)):
-        if i % 5 == 0: 
-            print(f"Running sample {i+1} out of {run_on_n_data_samples}. Time lapsed: {(time.time()-start_time)/60:.2f} minutes.", flush=True)
-        msg = data_instance_to_chat_input(challenge_data_instance,
-                                          systemPrompt="You are a helpful assistant that obeys instructions.")
-        ground_truth_grid = challenge_data_instance["solution"][0]
-
-        chat_templated_prompt = tokenizer.apply_chat_template(msg, tokenize=False, add_generation_prompt=True)
-
-        output_grid = outlines_model(chat_templated_prompt).outputGrid
-        # TODO: this is currently run in serial, to be parallelised using the outlines API
-        # TODO: train on original unpermuted grids (200?), hold out test set (50) i.e. offline fine-tuning 
-        # TODO: implement test-time fine-tuning
-
-        error, isShapeMismatch = pred_v_gt(output_grid, ground_truth_grid)
-        errors.append(error)
-        areShapeMismatches.append(isShapeMismatch)
-        gtGridSizes.append(len(ground_truth_grid)*len(ground_truth_grid[0]))
-    
-    relative_errors = [error/gtGridSize for error, gtGridSize in zip(errors, gtGridSizes)]
-
-    print("Inference complete", flush=True)
-
-    print("SUMMARY")
-    print(f"Model: {target_model}")
-    print(f"No. of samples: {run_on_n_data_samples}")
-    print(f"No. of Exact grid matches: {errors.count(0)}")
-    print(f"No. of instances where predicted grid shape != ground truth grid shape: {areShapeMismatches.count(True)}")
-    print(f"Mean 'relative' error (i.e. wrong cells divided by all cells in ground truth grid): {np.mean(relative_errors)}", flush=True)
-
-
 if __name__ == "__main__":
     batched_inference(batch_size=3)
