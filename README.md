@@ -1,5 +1,10 @@
 # shARC
 
+# Installing the environment
+
+```bash
+conda env create -f environment.yml
+```
 
 # classes/data_transfomers 
 

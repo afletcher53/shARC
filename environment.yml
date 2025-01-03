@@ -1,0 +1,16 @@
+name: arc-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9  # Or another suitable Python version
+  - pip
+  - numpy
+  - pydantic
+  - pip:
+    - transformers>=4.38.2 #Llama-3 specific requirement
+    - huggingface-hub
+    - outlines
+    - torch
+    - datasets
+    - accelerate>=0.27.0 #Llama-3 specific requirement

@@ -2,8 +2,14 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments,
 from datasets import Dataset
 from classes.data_loader import DataLoader
 from peft import LoraConfig, get_peft_model
+import json
 
-def load_training_data(split='training'):
+def load_config(config_path="config.json"):
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    return config
+
+def load_training_data(config, split='training'):
 
     dl = DataLoader()
 
@@ -30,10 +36,10 @@ def load_training_data(split='training'):
     data = [{"input": inp, "target": sol} for inp, sol in zip(inputs, solutions)]
     dataset = Dataset.from_list(data)
 
-    shuffled_dataset = dataset.shuffle(seed=42) 
+    shuffled_dataset = dataset.shuffle(seed=config['shuffle_seed']) 
 
-    train_test = dataset.train_test_split(test_size=0.2, seed=42)
-    val_test = train_test['test'].train_test_split(test_size=0.5, seed=42)
+    train_test = dataset.train_test_split(test_size=config['train_test_split_ratio'], seed=config['shuffle_seed'])
+    val_test = train_test['test'].train_test_split(test_size=config['val_test_split_ratio'], seed=config['shuffle_seed'])
 
     # Combine into final splits
     final_splits = {
@@ -102,7 +108,8 @@ def train_model(model, tokenizer, train_dataset, val_dataset):
 
 def main():
 
-    model_name = "meta-llama/Llama-3.2-1B-Instruct" 
+    config = load_config()
+    model_name = config['model_name'] 
 
     print("Loading model...")
     model = AutoModelForCausalLM.from_pretrained(model_name)
@@ -110,7 +117,7 @@ def main():
     print("Model loaded")
     
     print("Loading training data...")
-    train_dataset, val_dataset, test_dataset = load_training_data(split='training')
+    train_dataset, val_dataset, test_dataset = load_training_data(config, split='training')
     print("Data loaded")
 
     print("Training model...")
