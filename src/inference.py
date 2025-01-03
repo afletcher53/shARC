@@ -15,21 +15,26 @@ login(ps.HF_TOKEN)
 
 cfg = json.load(open("config.json"))
 
+
 class PredictedShape(BaseModel):
     """Schema for capturing the predicted shape of the grid."""
+
     rows: int
     cols: int
 
+
 class OutputGrid(BaseModel):
     """Schema for capturing the output grid."""
+
     outputGrid: list[list[int]]
 
-    @field_validator('outputGrid')
+    @field_validator("outputGrid")
     def check_consistency(cls, v):
         """Validates that all rows in the grid have the same length."""
         if len(set(map(len, v))) > 1:
-            raise ValueError('Inconsistent number of columns in grid rows')
+            raise ValueError("Inconsistent number of columns in grid rows")
         return v
+
 
 def load_outlines_model(target_model=cfg["model_name"]):
     """Loads the outlines model for the given target model."""
@@ -43,6 +48,7 @@ def load_outlines_model(target_model=cfg["model_name"]):
 
     return tokenizer, _model
 
+
 def grid_to_str(grid: list[list[int]]):
     """Converts a grid to a string representation."""
     grid_strs = []
@@ -50,6 +56,7 @@ def grid_to_str(grid: list[list[int]]):
         row_str = ", ".join([str(x) for x in row])
         grid_strs.append("[" + row_str + "]")
     return "[" + ", ".join(grid_strs) + "]"
+
 
 def data_instance_to_chat_input(challenge_data_instance, systemPrompt):
     """Formats a data instance into a chat input for the model."""
@@ -69,36 +76,36 @@ def data_instance_to_chat_input(challenge_data_instance, systemPrompt):
     instance_string = "\n".join(instance_string_list)
 
     messages = [
-    {
-        "role": "system",
-        "content": "You are a helpful assistant that can predict the shape of output grids based on input-output examples. The output grid's shape is determined by a transformation rule applied to the input grid's shape."
-    },
-    {
-        "role": "user",
-        "content": f"You are given example pairs of input and output grids "
-        f"which follow the same transformation rule. "
-        f"Infer this rule, and apply it to the final input grid. "
-        f"First, predict the number of rows and columns the output grid will have. "
-        f"Express this as a JSON object with the keys 'rows' and 'cols', where 'rows' is the number of rows and 'cols' is the number of columns. "
-        f"Then, generate the output grid itself as a list of lists of integers.\n\n{instance_string}",
-    }
-]
+        {
+            "role": "system",
+            "content": "You are a helpful assistant that can predict the shape of output grids based on input-output examples. The output grid's shape is determined by a transformation rule applied to the input grid's shape.",
+        },
+        {
+            "role": "user",
+            "content": f"You are given example pairs of input and output grids "
+            f"which follow the same transformation rule. "
+            f"Infer this rule, and apply it to the final input grid. "
+            f"First, predict the number of rows and columns the output grid will have. "
+            f"Express this as a JSON object with the keys 'rows' and 'cols', where 'rows' is the number of rows and 'cols' is the number of columns. "
+            f"Then, generate the output grid itself as a list of lists of integers.\n\n{instance_string}",
+        },
+    ]
     if systemPrompt:
         messages.insert(0, {"role": "system", "content": systemPrompt})
 
     return messages
 
+
 def get_dataloader_and_ids(dataset_type="training"):
     """Loads the dataset and returns the dataloader and corresponding IDs."""
     dl = DataLoader()
-    training_data = dl.load_dataset(
-        dataset_type=dataset_type
-    )
+    training_data = dl.load_dataset(dataset_type=dataset_type)
     print(
         f"Training data loaded. Number of instances: {len(set(training_data.keys()))}"
     )
     ids = list(training_data.keys())
     return dl, ids
+
 
 def pred_v_gt(predGrid, gtGrid, print_result=False):
     """Compares the predicted grid with the ground truth grid."""
@@ -120,19 +127,20 @@ def pred_v_gt(predGrid, gtGrid, print_result=False):
                 "Printing difference grid (TRUE = mismatch between pred and gt found:"
             )
             print(diffGrid)
-        return error, False 
+        return error, False
     except ValueError:
         print("Predicted arrays are jagged and do not form a grid.")
         return gtGrid.shape[0] * gtGrid.shape[1], True
 
+
 def analyze_dimensions(instance):
-    """Analyzes a single instance's input and output dimensions and infers the transformation rule."""
-    print(f"Instance:")
-    
-    # Initialize variables to store inferred rules
-    width_ratio = None
-    height_ratio = None
-    transformation_type = None
+    """
+    Analyzes a single instance's input and output dimensions and infers the transformation rule.
+    Enhanced to provide more specific transformation rules.
+    """
+
+    width_ratios = []
+    height_ratios = []
 
     for io_pair in instance["train_examples"]:
         output_width = len(io_pair["output"][0])
@@ -140,40 +148,34 @@ def analyze_dimensions(instance):
         input_width = len(io_pair["input"][0])
         input_height = len(io_pair["input"])
 
-        # Calculate ratios only for the first example to infer the rule
-        if width_ratio is None:
-            width_ratio = output_width / input_width
-        if height_ratio is None:
-            height_ratio = output_height / input_height
+        width_ratio = output_width / input_width if input_width != 0 else 0
+        height_ratio = output_height / input_height if input_height != 0 else 0
 
-        print(f"  Shape of output: {output_width} x {output_height}")
-        print(f"  Shape of input: {input_width} x {input_height}")
-        print(f"  Width Ratio: {width_ratio}")
-        print(f"  Height Ratio: {height_ratio}")
+        width_ratios.append(width_ratio)
+        height_ratios.append(height_ratio)
 
-        # Infer basic transformation type based on ratios
-        if width_ratio == height_ratio == 1:
+    if all(
+        w == width_ratios[0] and w.is_integer() for w in width_ratios
+    ) and all(h == height_ratios[0] and h.is_integer() for h in height_ratios):
+        if width_ratios[0] == height_ratios[0] == 1:
             transformation_type = "no_change"
-            print("  Possible Transformation: No spatial change or complex rearrangement")
-        elif width_ratio == height_ratio == int(width_ratio):
+        elif width_ratios[0] == height_ratios[0]:
             transformation_type = "replication"
-            print(f"  Possible Transformation: Replication/Scaling by a factor of {int(width_ratio)}")
-        elif width_ratio == 1:
+        elif width_ratios[0] == 1:
             transformation_type = "vertical_scaling"
-            print(f"  Possible Transformation: Vertical scaling/stretching by a factor of {height_ratio}")
-        elif height_ratio == 1:
+        elif height_ratios[0] == 1:
             transformation_type = "horizontal_scaling"
-            print(f"  Possible Transformation: Horizontal scaling/stretching by a factor of {width_ratio}")
         else:
             transformation_type = "complex"
-            print("  Possible Transformation: Complex transformation (e.g., scaling with interpolation, cropping, etc.)")
+    else:
+        transformation_type = "complex"
 
-    # Return the inferred transformation rule
     return {
-        "width_ratio": width_ratio,
-        "height_ratio": height_ratio,
-        "transformation_type": transformation_type
+        "width_ratio": width_ratios[0],
+        "height_ratio": height_ratios[0],
+        "transformation_type": transformation_type,
     }
+
 
 def apply_transformation(input_shape, transformation_rule):
     """Applies the inferred transformation rule to the input shape."""
@@ -184,23 +186,30 @@ def apply_transformation(input_shape, transformation_rule):
     elif transformation_rule["transformation_type"] == "replication":
         return PredictedShape(
             rows=int(input_height * transformation_rule["height_ratio"]),
-            cols=int(input_width * transformation_rule["width_ratio"])
+            cols=int(input_width * transformation_rule["width_ratio"]),
         )
     elif transformation_rule["transformation_type"] == "vertical_scaling":
         return PredictedShape(
             rows=int(input_height * transformation_rule["height_ratio"]),
-            cols=input_width
+            cols=input_width,
         )
     elif transformation_rule["transformation_type"] == "horizontal_scaling":
         return PredictedShape(
             rows=input_height,
-            cols=int(input_width * transformation_rule["width_ratio"])
+            cols=int(input_width * transformation_rule["width_ratio"]),
         )
     elif transformation_rule["transformation_type"] == "complex":
-        # TODO: Add more complex transformations
-        return PredictedShape(rows=input_height, cols=input_width)
+        avg_width_ratio = transformation_rule["width_ratio"]
+        avg_height_ratio = transformation_rule["height_ratio"]
+        return PredictedShape(
+            rows=int(input_height * avg_height_ratio),
+            cols=int(input_width * avg_width_ratio),
+        )
     else:
-        raise ValueError(f"Unknown transformation type: {transformation_rule['transformation_type']}")
+        raise ValueError(
+            f"Unknown transformation type: {transformation_rule['transformation_type']}"
+        )
+
 
 def batched_inference(batch_size=3):
     """Performs batched inference on the dataset."""
@@ -235,25 +244,28 @@ def batched_inference(batch_size=3):
                 dl.get_specific_sample(example_id)
                 for example_id in ids[i : i + batch_size]
             ]
-        
+
         batch_msgs = [
             data_instance_to_chat_input(instance, systemPrompt=systemPrompt)
             for instance in batch
         ]
 
         ground_truth_grids = [instance["solution"][0] for instance in batch]
-        
-        # Analyse dimensions and infer transformation rules for each instance in the batch
+
         transformation_rules = []
         for instance in batch:
             transformation_rule = analyze_dimensions(instance)
             transformation_rules.append(transformation_rule)
 
-        # Apply transformation rules to predict shapes
         predicted_shapes = []
         for instance, transformation_rule in zip(batch, transformation_rules):
-            input_shape = (len(instance["test_input"][0]), len(instance["test_input"])) 
-            predicted_shape = apply_transformation(input_shape, transformation_rule)
+            input_shape = (
+                len(instance["test_input"][0]),
+                len(instance["test_input"]),
+            )
+            predicted_shape = apply_transformation(
+                input_shape, transformation_rule
+            )
             predicted_shapes.append(predicted_shape)
 
         chat_templated_prompts = tokenizer.apply_chat_template(
@@ -262,9 +274,8 @@ def batched_inference(batch_size=3):
 
         output_grids = []
         for j, predicted_shape in enumerate(predicted_shapes):
-            # 2. Generate the output grid based on the predicted shape
             rows, cols = predicted_shape.rows, predicted_shape.cols
-            
+
             @outlines.prompt
             def generate_grid_prompt(chat_templated_prompt, rows, cols):
                 """
@@ -272,38 +283,44 @@ def batched_inference(batch_size=3):
                 The predicted output grid shape is {{ rows }} rows and {{ cols }} columns.
                 Now generate the output grid itself:
                 """
-            # Generate the prompt for grid generation
+
             grid_prompt = generate_grid_prompt(
-                chat_templated_prompts[j],
-                rows,
-                cols
+                chat_templated_prompts[j], rows, cols
             )
-            # Dynamically define the output schema based on predicted shape
+
             class DynamicOutputGrid(BaseModel):
                 outputGrid: list[list[int]]
 
-                @field_validator('outputGrid')
-                def check_dimensions(cls, v):
+                @field_validator("outputGrid")
+                def check_dimensions(cls, v, values, **kwargs):
                     if len(v) != rows:
-                        print(f"Warning: Expected {rows} rows, but got {len(v)}. Padding or truncating as needed.")
-                    
-                    padded_or_truncated_grid = []
+                        print(
+                            f"Warning: Expected {rows} rows, but got {len(v)}. Adjusting the number of rows."
+                        )
+
+                    adjusted_grid = []
                     for row_idx in range(rows):
                         if row_idx < len(v):
                             row = v[row_idx]
                             if len(row) != cols:
-                                print(f"Warning: Expected {cols} columns in row {row_idx}, but got {len(row)}. Padding or truncating row.")
-                            
-                            padded_or_truncated_row = row[:cols] + [0] * max(0, cols - len(row))
-                        
-                        else:
-                            padded_or_truncated_row = [0] * cols
-                        
-                        padded_or_truncated_grid.append(padded_or_truncated_row)
+                                print(
+                                    f"Warning: Expected {cols} columns in row {row_idx}, but got {len(row)}. Adjusting row."
+                                )
 
-                    return padded_or_truncated_grid
-            grid_generator = outlines.generate.json(outlines_model, DynamicOutputGrid)
-            
+                            adjusted_row = row[:cols] + [0] * max(
+                                0, cols - len(row)
+                            )
+                        else:
+                            adjusted_row = [0] * cols
+
+                        adjusted_grid.append(adjusted_row)
+
+                    return adjusted_grid
+
+            grid_generator = outlines.generate.json(
+                outlines_model, DynamicOutputGrid
+            )
+
             try:
                 output_grid = grid_generator(grid_prompt).outputGrid
             except ValueError as e:
@@ -329,7 +346,9 @@ def batched_inference(batch_size=3):
         )
 
         print("-" * 100)
-        print(f"Batch {i} complete in {(time.time()-start_time)/60:.2f} minutes")
+        print(
+            f"Batch {i} complete in {(time.time()-start_time)/60:.2f} minutes"
+        )
         print("-" * 100)
 
     relative_errors = [
@@ -348,6 +367,7 @@ def batched_inference(batch_size=3):
     print(
         f"Mean 'relative' error (i.e. wrong cells divided by all cells in ground truth grid): {np.mean(relative_errors)}"
     )
+
 
 if __name__ == "__main__":
     batched_inference(batch_size=3)
