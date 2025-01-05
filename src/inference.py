@@ -18,9 +18,14 @@ cfg = json.load(open("config.json"))
 
 class PredictedShape(BaseModel):
     """Schema for capturing the predicted shape of the grid."""
-
     rows: int
     cols: int
+
+    @property
+    def shape(self) -> tuple[int, int]:
+        """Returns the shape as a tuple (rows, cols)."""
+        return (self.rows, self.cols)
+
 
 
 class OutputGrid(BaseModel):
@@ -57,9 +62,12 @@ def grid_to_str(grid: list[list[int]]):
         grid_strs.append("[" + row_str + "]")
     return "[" + ", ".join(grid_strs) + "]"
 
-
 def data_instance_to_chat_input(challenge_data_instance, systemPrompt):
-    """Formats a data instance into a chat input for the model."""
+    """
+    Formats a data instance into a chat input for the model.
+    No longer prompts the LLM to guess rows and cols, 
+    just shows input-output examples and ends with the test input -> ?
+    """
     instance_string_list = []
     for io_pair in challenge_data_instance["train_examples"]:
         io_pair_as_string = (
@@ -68,32 +76,32 @@ def data_instance_to_chat_input(challenge_data_instance, systemPrompt):
             + grid_to_str(io_pair["output"])
         )
         instance_string_list.append(io_pair_as_string)
-    test_input_as_string = (
-        grid_to_str(challenge_data_instance["test_input"]) + " -> ?"
-    )
-    instance_string_list.append(test_input_as_string)
 
+    test_input_as_string = grid_to_str(challenge_data_instance["test_input"]) + " -> ?"
+    instance_string_list.append(test_input_as_string)
     instance_string = "\n".join(instance_string_list)
 
     messages = [
         {
             "role": "system",
-            "content": "You are a helpful assistant that can predict the shape of output grids based on input-output examples. The output grid's shape is determined by a transformation rule applied to the input grid's shape.",
+            "content": (
+                "You are a helpful assistant. "
+                "Based on the provided example input-output grids, "
+                "generate the final output grid for the test input."
+            ),
         },
         {
             "role": "user",
-            "content": f"You are given example pairs of input and output grids "
-            f"which follow the same transformation rule. "
-            f"Infer this rule, and apply it to the final input grid. "
-            f"First, predict the number of rows and columns the output grid will have. "
-            f"Express this as a JSON object with the keys 'rows' and 'cols', where 'rows' is the number of rows and 'cols' is the number of columns. "
-            f"Then, generate the output grid itself as a list of lists of integers.\n\n{instance_string}",
+            "content": f"{instance_string}",
         },
     ]
+
+    # Optionally prepend a system prompt if provided:
     if systemPrompt:
         messages.insert(0, {"role": "system", "content": systemPrompt})
 
     return messages
+
 
 
 def get_dataloader_and_ids(dataset_type="training"):
@@ -227,6 +235,7 @@ def batched_inference(batch_size=3):
     errors = []
     areShapeMismatches = []
     gtGridSizes = []
+    incorrect_size_predictions = []
 
     start_time = time.time()
     for i in range(0, run_on_n_data_samples, batch_size):
@@ -268,25 +277,37 @@ def batched_inference(batch_size=3):
             )
             predicted_shapes.append(predicted_shape)
 
+        # Check if this is actually correct (from batch[i]['solution'])
+        for i, (instance, predicted_shape) in enumerate(zip(batch, predicted_shapes)):
+            
+            rows = len(instance["solution"][0])
+            cols = len(instance["solution"][0][0])
+            if (rows, cols) != predicted_shape.shape:
+                incorrect_size_predictions.append(i)
+
         chat_templated_prompts = tokenizer.apply_chat_template(
             batch_msgs, tokenize=False, add_generation_prompt=True
         )
 
         output_grids = []
         for j, predicted_shape in enumerate(predicted_shapes):
-            rows, cols = predicted_shape.rows, predicted_shape.cols
+            (rows, cols) = predicted_shape.shape
+            if j in incorrect_size_predictions:
+                print(f"Skipping instance {j} due to incorrect size prediction")
+                continue
 
             @outlines.prompt
             def generate_grid_prompt(chat_templated_prompt, rows, cols):
                 """
                 {{ chat_templated_prompt }}
-                The predicted output grid shape is {{ rows }} rows and {{ cols }} columns.
-                Now generate the output grid itself:
+                The final output grid has {{ rows }} rows and {{ cols }} columns.
+                Generate the grid in JSON format with key 'outputGrid'.
                 """
 
-            grid_prompt = generate_grid_prompt(
-                chat_templated_prompts[j], rows, cols
-            )
+
+            grid_prompt = generate_grid_prompt(chat_templated_prompts[j], rows, cols)
+
+            print(grid_prompt)
 
             class DynamicOutputGrid(BaseModel):
                 outputGrid: list[list[int]]
@@ -348,6 +369,7 @@ def batched_inference(batch_size=3):
         print("-" * 100)
         print(
             f"Batch {i} complete in {(time.time()-start_time)/60:.2f} minutes"
+            f" - Incorrect size predictions: {incorrect_size_predictions}"
         )
         print("-" * 100)
 
