@@ -1,8 +1,3 @@
-from collections import Counter
-import os
-
-import matplotlib
-from matplotlib import pyplot as plt
 import numpy as np
 from classes.data_loader import DataLoader
 from utils.find_similar_grid import (
@@ -84,106 +79,10 @@ def apply_colour_map_delta(grid: np.ndarray, colour_map_delta: dict) -> np.ndarr
     
     transformed_grid = np.vectorize(map_color)(transformed_grid)
     return transformed_grid
-def plot_transformation_set(dl, challenge_id, training_examples, test_input, solution, transformed_test, transformed_solution, index):
-    """
-    Plots all training examples (inputs and outputs) along with test input and solution.
-    
-    :param dl: DataLoader instance
-    :param challenge_id: ID of the challenge
-    :param training_examples: List of 4 (input_dict, output_dict) pairs
-    :param test_input: Original test input
-    :param solution: Original solution
-    :param transformed_test: Transformed test input
-    :param transformed_solution: Transformed solution
-    :param index: Index of the transformation
-    """
-    fig, axs = plt.subplots(4, 2, figsize=(10, 20))
-    plt.suptitle(f"Transformation Set {index} for Challenge {challenge_id}", fontsize=16)
-    
-    # Plot the 4 training example pairs (input/output)
-    for i, (input_dict, output_dict) in enumerate(training_examples):
-        # Training input
-        axs[i, 0].imshow(
-            np.array(input_dict['original']).squeeze(),
-            cmap=matplotlib.colors.ListedColormap(dl.strings.CUSTOM_COLORS),
-            interpolation='nearest'
-        )
-        axs[i, 0].grid(True, which='both', color='grey', linewidth=0.5, alpha=0.5)
-        axs[i, 0].set_title(f"Training Input {i+1}")
-        
-        # Training output
-        axs[i, 1].imshow(
-            np.array(output_dict['original']).squeeze(),
-            cmap=matplotlib.colors.ListedColormap(dl.strings.CUSTOM_COLORS),
-            interpolation='nearest'
-        )
-        axs[i, 1].grid(True, which='both', color='grey', linewidth=0.5, alpha=0.5)
-        axs[i, 1].set_title(f"Training Output {i+1}")
-    
-    # Add description from first example
-    plt.figtext(0.02, 0.98, f"Transformation: {training_examples[0][0]['description']}", 
-                wrap=True, horizontalalignment='left', fontsize=10)
-    
-    # Adjust layout and add gridlines
-    for row in axs:
-        for ax in row:
-            ax.set_xticks(np.arange(-0.5, 30, 1))
-            ax.set_yticks(np.arange(-0.5, 30, 1))
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-    
-    plt.tight_layout()
-    
-    # Create a second figure for test input and solution
-    fig2, axs2 = plt.subplots(1, 2, figsize=(10, 5))
-    plt.suptitle("Test Input and Solution", fontsize=16)
-    
-    # Test input
-    axs2[0].imshow(
-        np.array(test_input).squeeze(),
-        cmap=matplotlib.colors.ListedColormap(dl.strings.CUSTOM_COLORS),
-        interpolation='nearest'
-    )
-    axs2[0].grid(True, which='both', color='grey', linewidth=0.5, alpha=0.5)
-    axs2[0].set_title("Test Input")
-    
-    # Solution
-    axs2[1].imshow(
-        np.array(solution).squeeze(),
-        cmap=matplotlib.colors.ListedColormap(dl.strings.CUSTOM_COLORS),
-        interpolation='nearest'
-    )
-    axs2[1].grid(True, which='both', color='grey', linewidth=0.5, alpha=0.5)
-    axs2[1].set_title("Solution")
-    
-    # Adjust layout for second figure
-    for ax in axs2:
-        ax.set_xticks(np.arange(-0.5, 30, 1))
-        ax.set_yticks(np.arange(-0.5, 30, 1))
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-    
-    plt.tight_layout()
-    
-    # Save the figures
-    output_dir = "output"
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-        
-    # Save training examples
-    output_path1 = os.path.join(output_dir, f"{challenge_id}_training_examples_{index}.png")
-    fig.savefig(output_path1, bbox_inches='tight', dpi=300)
-    
-    # Save test and solution
-    output_path2 = os.path.join(output_dir, f"{challenge_id}_test_and_solution_{index}.png")
-    fig2.savefig(output_path2, bbox_inches='tight', dpi=300)
-    
-    plt.close(fig)
-    plt.close(fig2)
 
 def main():
     dl = DataLoader()
-    training_data = dl.load_dataset("training",)
+    training_data = dl.load_dataset("training")
 
     total_training_inputs = 0
     for key, value in training_data.items():
@@ -203,33 +102,8 @@ def main():
     # dl.plot_train_and_test_examples({challenge_id: challenge_data})
 
     # dl.plot_solution(challenge_data["test_input"], f"{challenge_id}_test_input")
-    #print("Augmenting training examples.")
+
     training_examples_cid = get_augmented_training_examples(dl, challenge_id, visualize=False)
-    #print("Training examples augmented.")
-    # print(len(training_examples_cid))  # 64 (permutations)
-    # print(len(training_examples_cid[0]))  # 4 (training example I/O pairs)
-    # print(len(training_examples_cid[0][0]))  # 2 (input, output grid)
-
-    # TODO: what exactly does training_examples_cid look like?
-    #  from the code, it looks like this below - is this correct? what does pair[0] and pair[1] correspond to? input/output?
-    # training_examples_cid = [
-    #   [
-    #       {
-    #           "colour_map": {int1: int2, int2: int3, ...},
-    #           "description": "str",
-    #           "challenge_id": "",
-    #           "original": [[],...],
-    #           "permutation": [[]]...],
-    #       },
-    #       {
-    #           "colour_map": {int1: int2, int2: int3, ...},
-    #           "description": "str"},
-    #           ...
-    #   ],
-
-
-    # ]
-
 
     # for each training_example_cid, find the consistent colour map delta
 
@@ -238,11 +112,9 @@ def main():
         colour_map_deltas = []
         geometric_deltas = []
         for pair in training_example:
-            # TODO: if we feel like it, compare colour sizes first, before substracting the smaller c map from the larger one
             colour_map_deltas.append(subtract_colour_maps(pair[0]["colour_map"], pair[1]["colour_map"]))
             geometric_deltas.append(pair[0]["description"])
         # assert that all the geometric deltas are the same
-        # JC: I see, so these asserts are ensuring that the colour maps are aligned across different i/o pairs?
         assert all(delta == geometric_deltas[0] for delta in geometric_deltas)
         # assert that all the colour map deltas are the same
         assert all(delta == colour_map_deltas[0] for delta in colour_map_deltas)
@@ -254,7 +126,7 @@ def main():
    # Apply deltas to test input and solution
     test_input_deltas = []
     solution_deltas = []
-    for idx, training_example_delta in enumerate(training_example_deltas):
+    for training_example_delta in training_example_deltas:
         # Apply geometric transformation to test input
         transformed_test = apply_delta_to_grid(
             test_input, 
@@ -269,32 +141,29 @@ def main():
         )
         solution_deltas.append(transformed_solution)
         
-        # Plot comprehensive visualization
-        plot_transformation_set(
-            dl,
-            challenge_id,
-            training_examples_cid[idx],  # Pass all 4 training examples
-            test_input,
-            solution,
-            transformed_test,
-            transformed_solution,
-            idx
+        # Plot the transformations
+        # Plot the transformations - squeeze dimensions
+        dl.plot_solution(
+            np.array(transformed_test).squeeze(), 
+            f"{challenge_id}_test_delta_{len(test_input_deltas)}"
         )
-
-
+        dl.plot_solution(
+            np.array(transformed_solution).squeeze(), 
+            f"{challenge_id}_solution_delta_{len(solution_deltas)}"
+        )
+    # Plot all transformations together for comparison
+    all_grids = test_input_deltas + solution_deltas
+    dl.plot_multiple_solutions(
+        [np.array(grid) for grid in all_grids],
+        output_dir=f"{challenge_id}_transformations"
+    )
+    
     similar_grids, original_idx = find_similar_solutions(solution, dl, 5)
 
     for idx, grid in enumerate(similar_grids):
         dl.plot_solution(grid, f"similar_grid_{idx}")
 
     dl.plot_solution(solution, "original_solution")
-
-
-def remain():
-    pass
-    # TODO: Jason to write code to pass the augmented training examples to LLM in string form
-    #  for inference and then map prediction from string form back to array of arrays to
-    #  compare with ground truth
 
 
 if __name__ == "__main__":
