@@ -4,8 +4,9 @@ import time
 import numpy as np
 import outlines
 from huggingface_hub import login
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, conlist, Field
 from transformers import AutoTokenizer
+from typing_extensions import Annotated
 
 from classes.data_loader import DataLoader
 from classes.project_strings import ProjectStrings
@@ -40,6 +41,25 @@ class OutputGrid(BaseModel):
             raise ValueError("Inconsistent number of columns in grid rows")
         return v
 
+
+def makeDynamicOutputGrid(n_rows, n_cols):
+    """
+    Returns a base model for constrained generation conforming to the specified grid dimension (n_rows, n_cols)
+    :param n_rows:
+    :param n_cols:
+    :return:
+    """
+    class DynamicOutputGrid(BaseModel):
+        outputGrid: conlist(
+            conlist(
+                Annotated[int, Field(strict=True, ge=0, le=9)],
+                min_length=n_cols, max_length=n_cols),
+            min_length=n_rows, max_length=n_rows)
+
+        # ge=0, le=9 constrains the output integers to range 0-9
+        # setting min_length and max_length to the same means only the specified length is accepted
+
+    return DynamicOutputGrid
 
 def load_outlines_model(target_model=cfg["model_name"]):
     """Loads the outlines model for the given target model."""
