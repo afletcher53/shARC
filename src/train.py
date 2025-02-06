@@ -33,12 +33,12 @@ def load_training_data(config, split='training'):
         problems.append(inputs)
         solutions.append(outputs)
 
-    data = [{"input": inp, "target": sol} for inp, sol in zip(inputs, solutions)]
+    data = [{"input": inp, "target": sol} for inp, sol in zip(problems, solutions)] # Corrected line: use problems and solutions lists
     dataset = Dataset.from_list(data)
 
-    shuffled_dataset = dataset.shuffle(seed=config['shuffle_seed']) 
+    shuffled_dataset = dataset.shuffle(seed=config['shuffle_seed'])
 
-    train_test = dataset.train_test_split(test_size=config['train_test_split_ratio'], seed=config['shuffle_seed'])
+    train_test = shuffled_dataset.train_test_split(test_size=config['train_test_split_ratio'], seed=config['shuffle_seed']) # Use shuffled dataset
     val_test = train_test['test'].train_test_split(test_size=config['val_test_split_ratio'], seed=config['shuffle_seed'])
 
     # Combine into final splits
@@ -56,15 +56,33 @@ def load_training_data(config, split='training'):
     return train_dataset, val_dataset, test_dataset
 
 def preprocess_dataset(examples, tokenizer):
-    model_inputs = tokenizer(examples["input"])
-    labels = tokenizer(examples["target"])
+    # You can set a max_length value appropriate for your data/model.
+    tokenizer.pad_token = tokenizer.eos_token
+    max_length = 512  
+    model_inputs = tokenizer(
+        examples["input"],
+        padding="max_length",  # pad to max_length
+        truncation=True,       # truncate sequences longer than max_length
+        max_length=max_length
+    )
+    labels = tokenizer(
+        examples["target"],
+        padding="max_length",
+        truncation=True,
+        max_length=max_length
+    )
     model_inputs["labels"] = labels["input_ids"]
     return model_inputs
+
 
 def train_model(model, tokenizer, train_dataset, val_dataset):
 
     train_dataset_tok = train_dataset.map(lambda x: preprocess_dataset(x, tokenizer), batched=True)
     val_dataset_tok = val_dataset.map(lambda x: preprocess_dataset(x, tokenizer), batched=True)
+
+    # Check if tokenizer has a pad token and set one if not
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
@@ -86,9 +104,9 @@ def train_model(model, tokenizer, train_dataset, val_dataset):
         output_dir="./results",
         evaluation_strategy="epoch",
         learning_rate=2e-5,
-        per_device_train_batch_size=8,
-        per_device_eval_batch_size=8,
-        num_train_epochs=1,
+        per_device_train_batch_size=1,
+        per_device_eval_batch_size=1,
+        num_train_epochs=15,
         weight_decay=0.01,
         save_total_limit=2,  # Limits the number of checkpoints
         logging_dir='./logs',  # Directory for logs
@@ -109,16 +127,19 @@ def train_model(model, tokenizer, train_dataset, val_dataset):
 def main():
 
     config = load_config()
-    model_name = config['model_name'] 
+    model_name = config['model_name']
 
     print("Loading model...")
     model = AutoModelForCausalLM.from_pretrained(model_name)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     print("Model loaded")
-    
+
     print("Loading training data...")
     train_dataset, val_dataset, test_dataset = load_training_data(config, split='training')
     print("Data loaded")
 
     print("Training model...")
     train_model(model, tokenizer, train_dataset, val_dataset)
+
+if __name__ == "__main__":
+    main()

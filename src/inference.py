@@ -6,8 +6,6 @@ import outlines
 from huggingface_hub import login
 from pydantic import BaseModel, field_validator, conlist, Field
 from transformers import AutoTokenizer
-from typing_extensions import Annotated
-
 from classes.data_loader import DataLoader
 from classes.project_strings import ProjectStrings
 
@@ -16,9 +14,9 @@ login(ps.HF_TOKEN)
 
 cfg = json.load(open("config.json"))
 
-
 class PredictedShape(BaseModel):
     """Schema for capturing the predicted shape of the grid."""
+
     rows: int
     cols: int
 
@@ -26,8 +24,6 @@ class PredictedShape(BaseModel):
     def shape(self) -> tuple[int, int]:
         """Returns the shape as a tuple (rows, cols)."""
         return (self.rows, self.cols)
-
-
 
 class OutputGrid(BaseModel):
     """Schema for capturing the output grid."""
@@ -41,26 +37,6 @@ class OutputGrid(BaseModel):
             raise ValueError("Inconsistent number of columns in grid rows")
         return v
 
-
-def makeDynamicOutputGrid(n_rows, n_cols):
-    """
-    Returns a base model for constrained generation conforming to the specified grid dimension (n_rows, n_cols)
-    :param n_rows:
-    :param n_cols:
-    :return:
-    """
-    class DynamicOutputGrid(BaseModel):
-        outputGrid: conlist(
-            conlist(
-                Annotated[int, Field(strict=True, ge=0, le=9)],
-                min_length=n_cols, max_length=n_cols),
-            min_length=n_rows, max_length=n_rows)
-
-        # ge=0, le=9 constrains the output integers to range 0-9
-        # setting min_length and max_length to the same means only the specified length is accepted
-
-    return DynamicOutputGrid
-
 def load_outlines_model(target_model=cfg["model_name"]):
     """Loads the outlines model for the given target model."""
     _model = outlines.models.transformers(
@@ -73,7 +49,6 @@ def load_outlines_model(target_model=cfg["model_name"]):
 
     return tokenizer, _model
 
-
 def grid_to_str(grid: list[list[int]]):
     """Converts a grid to a string representation."""
     grid_strs = []
@@ -85,21 +60,19 @@ def grid_to_str(grid: list[list[int]]):
 def data_instance_to_chat_input(challenge_data_instance, systemPrompt):
     """
     Formats a data instance into a chat input for the model.
-    No longer prompts the LLM to guess rows and cols, 
+    No longer prompts the LLM to guess rows and cols,
     just shows input-output examples and ends with the test input -> ?
     """
     instance_string_list = []
     for io_pair in challenge_data_instance["train_examples"]:
         io_pair_as_string = (
-            grid_to_str(io_pair["input"])
-            + " -> "
-            + grid_to_str(io_pair["output"])
+            grid_to_str(io_pair["input"]) + " -> " + grid_to_str(io_pair["output"])
         )
         instance_string_list.append(io_pair_as_string)
 
     test_input_as_string = grid_to_str(challenge_data_instance["test_input"]) + " -> ?"
     instance_string_list.append(test_input_as_string)
-    instance_string = "\n".join(instance_string_list)
+    instance_string = "\n test input:".join(instance_string_list)
 
     messages = [
         {
@@ -122,8 +95,6 @@ def data_instance_to_chat_input(challenge_data_instance, systemPrompt):
 
     return messages
 
-
-
 def get_dataloader_and_ids(dataset_type="training"):
     """Loads the dataset and returns the dataloader and corresponding IDs."""
     dl = DataLoader()
@@ -133,7 +104,6 @@ def get_dataloader_and_ids(dataset_type="training"):
     )
     ids = list(training_data.keys())
     return dl, ids
-
 
 def pred_v_gt(predGrid, gtGrid, print_result=False):
     """Compares the predicted grid with the ground truth grid."""
@@ -159,7 +129,6 @@ def pred_v_gt(predGrid, gtGrid, print_result=False):
     except ValueError:
         print("Predicted arrays are jagged and do not form a grid.")
         return gtGrid.shape[0] * gtGrid.shape[1], True
-
 
 def analyze_dimensions(instance):
     """
@@ -204,7 +173,6 @@ def analyze_dimensions(instance):
         "transformation_type": transformation_type,
     }
 
-
 def apply_transformation(input_shape, transformation_rule):
     """Applies the inferred transformation rule to the input shape."""
     input_width, input_height = input_shape
@@ -238,17 +206,11 @@ def apply_transformation(input_shape, transformation_rule):
             f"Unknown transformation type: {transformation_rule['transformation_type']}"
         )
 
-
-def batched_inference(batch_size=3):
+def batched_inference(batch_size=1):
     """Performs batched inference on the dataset."""
     target_model = cfg["model_name"]
-    run_on_n_data_samples = 30
+    run_on_n_data_samples = 400
     systemPrompt = "You are a helpful assistant that obeys instructions."
-
-    print("Loading model...", flush=True)
-    tokenizer, outlines_model = load_outlines_model(target_model=target_model)
-    print("Model loaded", flush=True)
-    print("Running inference...", flush=True)
 
     dl, ids = get_dataloader_and_ids(dataset_type="training")
 
@@ -256,6 +218,7 @@ def batched_inference(batch_size=3):
     areShapeMismatches = []
     gtGridSizes = []
     incorrect_size_predictions = []
+    incorrect_size_predictions_details = {}
 
     start_time = time.time()
     for i in range(0, run_on_n_data_samples, batch_size):
@@ -263,6 +226,12 @@ def batched_inference(batch_size=3):
             f"Processing examples starting from {i}... time lapsed: {(time.time()-start_time)/60:.2f} minutes",
             flush=True,
         )
+
+        # # Load the model and tokenizer at the beginning of each batch
+        # print("Loading model...", flush=True)
+        # tokenizer, outlines_model = load_outlines_model(target_model=target_model)
+        # print("Model loaded", flush=True)
+
         if (i + batch_size) > run_on_n_data_samples:
             batch = [
                 dl.get_specific_sample(example_id)
@@ -292,104 +261,126 @@ def batched_inference(batch_size=3):
                 len(instance["test_input"][0]),
                 len(instance["test_input"]),
             )
-            predicted_shape = apply_transformation(
-                input_shape, transformation_rule
-            )
+            predicted_shape = apply_transformation(input_shape, transformation_rule)
             predicted_shapes.append(predicted_shape)
+           
 
         # Check if this is actually correct (from batch[i]['solution'])
-        for i, (instance, predicted_shape) in enumerate(zip(batch, predicted_shapes)):
-            
+        for k, (instance, predicted_shape) in enumerate(
+            zip(batch, predicted_shapes)
+        ):
             rows = len(instance["solution"][0])
             cols = len(instance["solution"][0][0])
             if (rows, cols) != predicted_shape.shape:
-                incorrect_size_predictions.append(i)
+                incorrect_size_predictions.append(i + k)  # Adjusted index
+                incorrect_size_predictions_details[i + k] = {
+                "input_shape": input_shape,
+                "transformation_rule": transformation_rule,
+                "predicted_shape": predicted_shape,
+            }
 
-        chat_templated_prompts = tokenizer.apply_chat_template(
-            batch_msgs, tokenize=False, add_generation_prompt=True
-        )
+        # chat_templated_prompts = tokenizer.apply_chat_template(
+        #     batch_msgs, tokenize=False, add_generation_prompt=True
+        # )
 
-        output_grids = []
-        for j, predicted_shape in enumerate(predicted_shapes):
-            (rows, cols) = predicted_shape.shape
-            if j in incorrect_size_predictions:
-                print(f"Skipping instance {j} due to incorrect size prediction")
-                continue
+        # output_grids = []
+        # for j, predicted_shape in enumerate(predicted_shapes):
+        #     (rows, cols) = predicted_shape.shape
+        #     current_index = i + j
 
-            @outlines.prompt
-            def generate_grid_prompt(chat_templated_prompt, rows, cols):
-                """
-                {{ chat_templated_prompt }}
-                The final output grid has {{ rows }} rows and {{ cols }} columns.
-                Generate the grid in JSON format with key 'outputGrid'.
-                """
+            # if current_index in incorrect_size_predictions:
+            #     print(f"Skipping instance {current_index} due to incorrect size prediction")
+            #     continue
+
+            # @outlines.prompt
+            # def generate_grid_prompt(chat_templated_prompt, rows, cols):
+            #     """
+            #     {{ chat_templated_prompt }}
+            #     The final output grid has {{ rows }} rows and {{ cols }} columns.
+            #     Generate the grid in JSON format with key 'outputGrid'.
+            #     """
+
+            # grid_prompt = generate_grid_prompt(chat_templated_prompts[j], rows, cols)
+
+            # print(grid_prompt)
+
+            # class DynamicOutputGrid(BaseModel):
+            #     outputGrid: list[list[int]]
+
+            #     @field_validator("outputGrid")
+            #     def check_dimensions(cls, v, values, **kwargs):
+            #         if len(v) != rows:
+            #             print(
+            #                 f"Warning: Expected {rows} rows, but got {len(v)}. Adjusting the number of rows."
+            #             )
+
+            #         adjusted_grid = []
+            #         for row_idx in range(rows):
+            #             if row_idx < len(v):
+            #                 row = v[row_idx]
+            #                 if len(row) != cols:
+            #                     print(
+            #                         f"Warning: Expected {cols} columns in row {row_idx}, but got {len(row)}. Adjusting row."
+            #                     )
+
+            #                 adjusted_row = row[:cols] + [0] * max(
+            #                     0, cols - len(row)
+            #                 )
+            #             else:
+            #                 adjusted_row = [0] * cols
+
+            #             adjusted_grid.append(adjusted_row)
+
+            #         return adjusted_grid
+
+            # grid_generator = outlines.generate.json(
+            #     outlines_model, DynamicOutputGrid
+            # )
+
+            # try:
+            #     output_grid = grid_generator(grid_prompt).outputGrid
+            # except ValueError as e:
+            #     print(f"Error during grid generation: {e}")
+            #     output_grid = [[0] * cols for _ in range(rows)]
+
+            # output_grids.append(output_grid)
+
+            # print(output_grid)
+
+            # current_instance_index = i + j
+            # if current_instance_index < len(batch):
+            #     current_instance = batch[current_instance_index]
+            #     output_directory = "inference_plots"
+            #     dl.plot_inference_results(
+            #         current_instance, output_grid, output_directory
+            #     )
 
 
-            grid_prompt = generate_grid_prompt(chat_templated_prompts[j], rows, cols)
+        # compares = [
+        #     pred_v_gt(output_grid, ground_truth_grid)
+        #     for output_grid, ground_truth_grid in zip(
+        #         output_grids, ground_truth_grids
+        #     )
+        # ]
 
-            print(grid_prompt)
+        # errors.extend([x[0] for x in compares])
+        # areShapeMismatches.extend([x[1] for x in compares])
+        # gtGridSizes.extend(
+        #     [
+        #         len(ground_truth_grid) * len(ground_truth_grid[0])
+        #         for ground_truth_grid in ground_truth_grids
+        #     ]
+        # )
 
-            class DynamicOutputGrid(BaseModel):
-                outputGrid: list[list[int]]
-
-                @field_validator("outputGrid")
-                def check_dimensions(cls, v, values, **kwargs):
-                    if len(v) != rows:
-                        print(
-                            f"Warning: Expected {rows} rows, but got {len(v)}. Adjusting the number of rows."
-                        )
-
-                    adjusted_grid = []
-                    for row_idx in range(rows):
-                        if row_idx < len(v):
-                            row = v[row_idx]
-                            if len(row) != cols:
-                                print(
-                                    f"Warning: Expected {cols} columns in row {row_idx}, but got {len(row)}. Adjusting row."
-                                )
-
-                            adjusted_row = row[:cols] + [0] * max(
-                                0, cols - len(row)
-                            )
-                        else:
-                            adjusted_row = [0] * cols
-
-                        adjusted_grid.append(adjusted_row)
-
-                    return adjusted_grid
-
-            grid_generator = outlines.generate.json(
-                outlines_model, DynamicOutputGrid
-            )
-
-            try:
-                output_grid = grid_generator(grid_prompt).outputGrid
-            except ValueError as e:
-                print(f"Error during grid generation: {e}")
-                output_grid = [[0] * cols for _ in range(rows)]
-
-            output_grids.append(output_grid)
-
-        compares = [
-            pred_v_gt(output_grid, ground_truth_grid)
-            for output_grid, ground_truth_grid in zip(
-                output_grids, ground_truth_grids
-            )
-        ]
-
-        errors.extend([x[0] for x in compares])
-        areShapeMismatches.extend([x[1] for x in compares])
-        gtGridSizes.extend(
-            [
-                len(ground_truth_grid) * len(ground_truth_grid[0])
-                for ground_truth_grid in ground_truth_grids
-            ]
-        )
+        # Unload the model and clear the CUDA cache at the end of each batch
+        # del tokenizer
+        # del outlines_model
+        # torch.cuda.empty_cache()
 
         print("-" * 100)
         print(
             f"Batch {i} complete in {(time.time()-start_time)/60:.2f} minutes"
-            f" - Incorrect size predictions: {incorrect_size_predictions}"
+            f" - Incorrect size predictions: {len(incorrect_size_predictions)}"
         )
         print("-" * 100)
 
@@ -410,6 +401,5 @@ def batched_inference(batch_size=3):
         f"Mean 'relative' error (i.e. wrong cells divided by all cells in ground truth grid): {np.mean(relative_errors)}"
     )
 
-
 if __name__ == "__main__":
-    batched_inference(batch_size=3)
+    batched_inference(batch_size=1)

@@ -245,6 +245,73 @@ class DataLoader(BaseClassWithLogger):
             plt.savefig(output_file_path)
             plt.close(fig)
 
+    def plot_inference_results(
+        self, instance: dict, generated_output: np.ndarray, output_dir: str = "output"
+    ):
+        """
+        Plots the train examples, test input, and generated output for a single instance.
+
+        :param instance: Dictionary containing sample data with 'train_examples' and 'test_input'.
+        :param generated_output: The generated output grid (numpy array).
+        :param output_dir: Directory where the plot images will be saved.
+        """
+        sample_id = "current_sample"  # Default ID since we're plotting one at a time
+
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        train_examples = instance["train_examples"]
+        num_train_examples = len(train_examples)
+        generated_output = np.array(generated_output)
+
+        fig, axs = plt.subplots(
+            num_train_examples + 2,
+            2,
+            figsize=(10, 5 * (num_train_examples + 2)),
+        )
+
+        # Plot train examples
+        for train_idx, ex in enumerate(train_examples):
+            input_grid = np.array(ex["input"])
+            output_grid = np.array(ex["output"])
+
+            axs[train_idx, 0].imshow(
+                input_grid, cmap="viridis", interpolation="nearest"
+            )
+            axs[train_idx, 0].set_title(f"Train Input {train_idx + 1}")
+            axs[train_idx, 0].axis("off")
+
+            axs[train_idx, 1].imshow(
+                output_grid, cmap="viridis", interpolation="nearest"
+            )
+            axs[train_idx, 1].set_title(f"Train Output {train_idx + 1}")
+            axs[train_idx, 1].axis("off")
+
+        # Plot test input
+        test_input_grid = np.array(instance["test_input"])
+        axs[num_train_examples, 0].imshow(
+            test_input_grid, cmap="viridis", interpolation="nearest"
+        )
+        axs[num_train_examples, 0].set_title("Test Input")
+        axs[num_train_examples, 0].axis("off")
+        axs[num_train_examples, 1].axis("off")  # Hide the unused subplot
+
+        # Plot generated output
+        axs[num_train_examples + 1, 0].imshow(
+            generated_output, cmap="viridis", interpolation="nearest"
+        )
+        axs[num_train_examples + 1, 0].set_title("Generated Output")
+        axs[num_train_examples + 1, 0].axis("off")
+        axs[num_train_examples + 1, 1].axis("off")  # Hide the unused subplot
+
+        fig.suptitle(f"Sample: {sample_id}")
+
+        output_file_path = os.path.join(
+            output_dir, f"{sample_id}_inference_result.png"
+        )
+        plt.savefig(output_file_path)
+        plt.close(fig)
+        self.logger.info(f"Inference results plot saved as {output_file_path}")
     def plot_solution(
         self, grid: np.ndarray, file_name: str, output_dir: str = "output"
     ):

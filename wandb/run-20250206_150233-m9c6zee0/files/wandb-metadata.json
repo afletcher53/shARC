@@ -1,0 +1,128 @@
+{
+    "os": "Linux-6.11.0-14-generic-x86_64-with-glibc2.40",
+    "python": "3.11.9",
+    "heartbeatAt": "2025-02-06T15:02:33.776769",
+    "startedAt": "2025-02-06T15:02:33.082714",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/home/aaron/Desktop/Repositories/shARC/src/train.py",
+    "codePathLocal": "src/train.py",
+    "codePath": "src/train.py",
+    "git": {
+        "remote": "https://github.com/afletcher53/shARC.git",
+        "commit": "fb107fbd608b069e3f8c14fd862c9c07372d8aef"
+    },
+    "email": "afletcher53@gmail.com",
+    "root": "/home/aaron/Desktop/Repositories/shARC",
+    "host": "aaron",
+    "username": "aaron",
+    "executable": "/home/aaron/anaconda3/envs/dolphin/bin/python",
+    "cpu_count": 8,
+    "cpu_count_logical": 16,
+    "cpu_freq": {
+        "current": 4569.9621875,
+        "min": 2991.0,
+        "max": 5581.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 4616.181,
+            "min": 2991.0,
+            "max": 5581.0
+        },
+        {
+            "current": 4633.204,
+            "min": 2991.0,
+            "max": 5581.0
+        },
+        {
+            "current": 4633.196,
+            "min": 2991.0,
+            "max": 5581.0
+        },
+        {
+            "current": 4586.176,
+            "min": 2991.0,
+            "max": 5581.0
+        },
+        {
+            "current": 4656.044,
+            "min": 2991.0,
+            "max": 5581.0
+        },
+        {
+            "current": 4629.562,
+            "min": 2991.0,
+            "max": 5581.0
+        },
+        {
+            "current": 4573.651,
+            "min": 2991.0,
+            "max": 5581.0
+        },
+        {
+            "current": 4579.685,
+            "min": 2991.0,
+            "max": 5581.0
+        },
+        {
+            "current": 4648.142,
+            "min": 2991.0,
+            "max": 5581.0
+        },
+        {
+            "current": 4614.175,
+            "min": 2991.0,
+            "max": 5581.0
+        },
+        {
+            "current": 4566.814,
+            "min": 2991.0,
+            "max": 5581.0
+        },
+        {
+            "current": 4586.975,
+            "min": 2991.0,
+            "max": 5581.0
+        },
+        {
+            "current": 4651.127,
+            "min": 2991.0,
+            "max": 5581.0
+        },
+        {
+            "current": 4650.34,
+            "min": 2991.0,
+            "max": 5581.0
+        },
+        {
+            "current": 4467.485,
+            "min": 2991.0,
+            "max": 5581.0
+        },
+        {
+            "current": 4647.075,
+            "min": 2991.0,
+            "max": 5581.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 912.6906433105469,
+            "used": 549.2441825866699
+        }
+    },
+    "gpu": "NVIDIA GeForce RTX 4070 Ti SUPER",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 4070 Ti SUPER",
+            "memory_total": 17171480576
+        }
+    ],
+    "memory": {
+        "total": 59.40298843383789
+    }
+}
