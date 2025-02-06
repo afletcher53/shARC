@@ -206,6 +206,7 @@ def apply_transformation(input_shape, transformation_rule):
             f"Unknown transformation type: {transformation_rule['transformation_type']}"
         )
 
+
 def batched_inference(batch_size=1):
     """Performs batched inference on the dataset."""
     target_model = cfg["model_name"]
